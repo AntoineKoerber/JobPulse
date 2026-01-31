@@ -72,6 +72,55 @@
       margin: 0 auto;
       position: relative;
       z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+    .hero-left { flex: 1; }
+    .hero-right {
+      flex-shrink: 0;
+      width: 280px;
+    }
+    .hero-widget {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      backdrop-filter: blur(12px);
+    }
+    .hero-widget-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      margin-bottom: 1rem;
+    }
+    .hero-widget-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .hero-widget-row:last-child { border-bottom: none; }
+    .hero-widget-row .hw-label {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+    .hero-widget-row .hw-value {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .hw-value.green { color: var(--green); }
+    .hw-value.accent { color: #818cf8; }
+    .hw-value.orange { color: var(--orange); }
+    .hw-value.cyan { color: var(--cyan); }
+    @media (max-width: 900px) {
+      .hero-inner { flex-direction: column; align-items: flex-start; }
+      .hero-right { width: 100%; }
     }
     .hero-badge {
       display: inline-flex;
@@ -450,14 +499,25 @@
 <!-- ── Hero ──────────────────────────────────────── -->
 <section class="hero">
   <div class="hero-inner">
-    <div class="hero-badge"><span class="pulse"></span> Live Data</div>
-    <h1>Job Market<br><span class="gradient">Intelligence</span></h1>
-    <p class="hero-sub">Aggregated job listings from multiple sources with real-time analytics, trend detection, and salary insights.</p>
-    <div class="hero-sources">
-      <span class="source-pill"><span class="dot green"></span> RemoteOK</span>
-      <span class="source-pill"><span class="dot indigo"></span> Arbeitnow</span>
-      <span class="source-pill">Supabase PostgreSQL</span>
-      <span class="source-pill">FastAPI Pipeline</span>
+    <div class="hero-left">
+      <div class="hero-badge"><span class="pulse"></span> Live Data</div>
+      <h1>Job Market<br><span class="gradient">Intelligence</span></h1>
+      <p class="hero-sub">Aggregated job listings from multiple sources with real-time analytics, trend detection, and salary insights.</p>
+      <div class="hero-sources">
+        <span class="source-pill"><span class="dot green"></span> RemoteOK</span>
+        <span class="source-pill"><span class="dot indigo"></span> Arbeitnow</span>
+        <span class="source-pill">Supabase PostgreSQL</span>
+        <span class="source-pill">FastAPI Pipeline</span>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hero-widget">
+        <div class="hero-widget-title">Pipeline Status</div>
+        <div class="hero-widget-row"><span class="hw-label">Total Listings</span><span class="hw-value green" id="hw-total">—</span></div>
+        <div class="hero-widget-row"><span class="hw-label">Sources Active</span><span class="hw-value accent" id="hw-sources">—</span></div>
+        <div class="hero-widget-row"><span class="hw-label">Avg Quality</span><span class="hw-value cyan" id="hw-quality">—</span></div>
+        <div class="hero-widget-row"><span class="hw-label">Last Refresh</span><span class="hw-value orange" id="hw-refresh">—</span></div>
+      </div>
     </div>
   </div>
 </section>
@@ -639,6 +699,7 @@
       renderTable(data);
       updatePag(total, page);
       document.querySelector('#stat-total .stat-value').textContent = total.toLocaleString();
+      document.getElementById('hw-total').textContent = total.toLocaleString();
       document.getElementById('results-count').textContent = `${total.toLocaleString()} results`;
     } catch (e) { console.error(e); }
   }
@@ -690,6 +751,13 @@
       all.forEach(l => { srcCounts[l.source] = (srcCounts[l.source] || 0) + 1; });
       renderDoughnut(srcCounts);
       document.querySelector('#stat-sources .stat-value').textContent = Object.keys(srcCounts).length;
+      document.getElementById('hw-sources').textContent = `${Object.keys(srcCounts).length} / 2`;
+
+      // Avg quality for hero widget
+      const qualRes = await q('job_listings', 'is_active=eq.true&select=quality_score');
+      const qualData = await qualRes.json();
+      const avgQ = qualData.length ? Math.round(qualData.reduce((s, l) => s + (l.quality_score || 0), 0) / qualData.length) : 0;
+      document.getElementById('hw-quality').textContent = `${avgQ} / 100`;
 
       // Companies
       const compCounts = {};
@@ -724,8 +792,9 @@
       renderHistory(hist);
       if (hist.length) {
         const d = new Date(hist[0].started_at);
-        document.querySelector('#stat-latest .stat-value').textContent =
-          d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const formatted = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        document.querySelector('#stat-latest .stat-value').textContent = formatted;
+        document.getElementById('hw-refresh').textContent = formatted;
       }
     } catch (e) { console.error(e); }
   }
