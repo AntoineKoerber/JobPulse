@@ -315,7 +315,23 @@
       font-size: 0.85rem;
     }
     .insight-list li:last-child { border-bottom: none; }
-    .insight-list .label { color: var(--text-secondary); }
+    .insight-list .rank {
+      width: 1.4rem;
+      height: 1.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-elevated);
+      border-radius: 6px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+    .insight-list li:nth-child(1) .rank { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+    .insight-list li:nth-child(2) .rank { background: rgba(34,197,94,0.12); color: #86efac; }
+    .insight-list li:nth-child(3) .rank { background: rgba(249,115,22,0.12); color: #fdba74; }
+    .insight-list .label { color: var(--text-secondary); flex: 1; margin-left: 0.6rem; }
     .insight-list .value { font-weight: 700; color: var(--text-primary); }
 
     /* ── Filters ───────────────────────────────────── */
@@ -712,13 +728,16 @@
     }
     tb.innerHTML = jobs.map(j => {
       const sal = fmtSal(j.salary_min, j.salary_max, j.currency);
+      const title = esc(titleCase(j.title));
+      const company = esc(titleCase(j.company));
+      const loc = esc(titleCase(j.location || '—'));
       return `<tr>
-        <td>${j.url ? `<a href="${j.url}" target="_blank" rel="noopener">${esc(j.title)}</a>` : esc(j.title)}</td>
-        <td>${esc(j.company)}</td>
-        <td>${esc(j.location || '—')}</td>
+        <td>${j.url ? `<a href="${j.url}" target="_blank" rel="noopener">${title}</a>` : title}</td>
+        <td>${company}</td>
+        <td>${loc}</td>
         <td><span class="salary${!j.salary_min && !j.salary_max ? ' none' : ''}">${sal}</span></td>
-        <td>${(j.tags || []).slice(0, 3).map(t => `<span class="tag">${esc(t)}</span>`).join('')}</td>
-        <td><span class="source-badge ${j.source}">${j.source}</span></td>
+        <td>${(j.tags || []).slice(0, 3).map(t => `<span class="tag">${esc(fmtTag(t))}</span>`).join('')}</td>
+        <td><span class="source-badge ${j.source}">${fmtSource(j.source)}</span></td>
       </tr>`;
     }).join('');
   }
@@ -739,6 +758,30 @@
   }
 
   function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  function titleCase(s) {
+    if (!s) return '';
+    const minor = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by','from','as']);
+    return s.split(' ').map((w, i) => {
+      const lo = w.toLowerCase();
+      if (i > 0 && minor.has(lo)) return lo;
+      if (w === w.toUpperCase() && w.length <= 5) return w; // keep acronyms like "AI", "AWS"
+      return lo.charAt(0).toUpperCase() + lo.slice(1);
+    }).join(' ');
+  }
+
+  function fmtTag(t) {
+    if (!t) return '';
+    const up = t.trim();
+    // Keep short acronyms uppercase
+    if (up.length <= 4 && up === up.toUpperCase()) return up;
+    return up.charAt(0).toUpperCase() + up.slice(1);
+  }
+
+  function fmtSource(s) {
+    const map = { remoteok: 'RemoteOK', arbeitnow: 'Arbeitnow' };
+    return map[s] || s;
+  }
 
   // ── Insights ──────────────────────────────────
   async function loadInsights() {
@@ -801,8 +844,9 @@
 
   function renderList(id, items) {
     const ul = document.getElementById(id);
-    ul.innerHTML = items.map(([label, count]) =>
-      `<li><span class="label">${esc(label)}</span><span class="value">${count}</span></li>`
+    const isTags = id.includes('tags');
+    ul.innerHTML = items.map(([label, count], i) =>
+      `<li><span class="rank">${i + 1}</span><span class="label">${esc(isTags ? fmtTag(label) : titleCase(label))}</span><span class="value">${count}</span></li>`
     ).join('');
   }
 
@@ -821,7 +865,7 @@
   function renderDoughnut(srcCounts) {
     const ctx = document.getElementById('sources-doughnut');
     if (doughnutChart) doughnutChart.destroy();
-    const labels = Object.keys(srcCounts);
+    const labels = Object.keys(srcCounts).map(fmtSource);
     const colors = ['#6366f1', '#22c55e', '#f97316', '#06b6d4', '#a855f7'];
     doughnutChart = new Chart(ctx, {
       type: 'doughnut',
