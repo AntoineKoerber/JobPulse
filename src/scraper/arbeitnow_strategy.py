@@ -50,6 +50,11 @@ class ArbeitnowStrategy(BaseScrapeStrategy):
                     if isinstance(tags, str):
                         tags = [t.strip() for t in tags.split(",") if t.strip()]
 
+                    posted = item.get(field_map.get("posted_at", "created_at"), "")
+                    if isinstance(posted, (int, float)):
+                        from datetime import datetime, timezone
+                        posted = datetime.fromtimestamp(posted, tz=timezone.utc).isoformat()
+
                     listings.append(RawJobListing(
                         external_id=ext_id,
                         source="arbeitnow",
@@ -59,7 +64,7 @@ class ArbeitnowStrategy(BaseScrapeStrategy):
                         salary_raw=item.get("salary", None),
                         tags=tags if isinstance(tags, list) else [],
                         url=item.get(field_map.get("url", "url"), ""),
-                        posted_at=item.get(field_map.get("posted_at", "created_at"), ""),
+                        posted_at=str(posted) if posted else "",
                     ))
 
                 # Check if there are more pages

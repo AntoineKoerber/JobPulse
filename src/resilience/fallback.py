@@ -5,62 +5,44 @@ the system returns the most recent successful scrape data instead
 of serving bad data. Mirrors Kivaro's scraper_fallback.py pattern.
 """
 
-import aiosqlite
-import json
 from typing import Optional, List
-from datetime import datetime
+from supabase import Client
 
 
-async def get_last_successful_scrape(
-    db: aiosqlite.Connection,
+def get_last_successful_scrape(
+    db: Client,
     source: str,
 ) -> Optional[List[dict]]:
     """Retrieve listings from the last successful scrape for a source.
 
     Returns None if no successful scrape exists.
     """
-    cursor = await db.execute(
-        """SELECT id, quality_score, completed_at FROM scrape_runs
-           WHERE source = ? AND status = 'completed' AND quality_score >= 60
-           ORDER BY completed_at DESC LIMIT 1""",
-        (source,),
-    )
-    run = await cursor.fetchone()
-    if not run:
+    # Check if a successful run exists
+    run = db.table("scrape_runs").select("id, quality_score, completed_at").eq(
+        "source", source
+    ).eq("status", "completed").gte("quality_score", 60).order(
+        "completed_at", desc=True
+    ).limit(1).execute()
+
+    if not run.data:
         return None
 
     # Return all active listings for this source
-    cursor = await db.execute(
-        """SELECT external_id, title, company, location, salary_min,
-                  salary_max, currency, tags, url, posted_at, quality_score
-           FROM job_listings WHERE source = ? AND is_active = 1""",
-        (source,),
-    )
-    rows = await cursor.fetchall()
-    if not rows:
+    result = db.table("job_listings").select(
+        "external_id, title, company, location, salary_min, salary_max, "
+        "currency, tags, url, posted_at, quality_score"
+    ).eq("source", source).eq("is_active", True).execute()
+
+    if not result.data:
         return None
 
-    return [
-        {
-            "external_id": r[0], "title": r[1], "company": r[2],
-            "location": r[3], "salary_min": r[4], "salary_max": r[5],
-            "currency": r[6], "tags": json.loads(r[7]) if r[7] else [],
-            "url": r[8], "posted_at": r[9], "quality_score": r[10],
-        }
-        for r in rows
-    ]
+    return result.data
 
 
-async def record_fallback_usage(
-    db: aiosqlite.Connection,
-    source: str,
-    reason: str,
-):
+def record_fallback_usage(db: Client, source: str, reason: str):
     """Log when a fallback was used (stored as a failed scrape run)."""
-    now = datetime.utcnow().isoformat()
-    await db.execute(
-        """INSERT INTO scrape_runs (source, started_at, completed_at, status, quality_score)
-           VALUES (?, ?, ?, 'fallback', 0)""",
-        (source, now, now),
-    )
-    await db.commit()
+    db.table("scrape_runs").insert({
+        "source": source,
+        "status": "fallback",
+        "quality_score": 0,
+    }).execute()

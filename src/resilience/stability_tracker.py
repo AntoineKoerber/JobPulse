@@ -7,13 +7,13 @@ false "removed" alerts.
 """
 
 from typing import Set, Dict
-import aiosqlite
+from supabase import Client
 
 REMOVAL_THRESHOLD = 3  # Consecutive misses before confirming removal
 
 
-async def update_stability(
-    db: aiosqlite.Connection,
+def update_stability(
+    db: Client,
     source: str,
     current_ids: Set[str],
 ) -> Dict[str, set]:
@@ -22,40 +22,37 @@ async def update_stability(
     Returns dict with 'confirmed_removals' and 'tentative_removals' sets.
     """
     # Get all active listings for this source
-    cursor = await db.execute(
-        "SELECT external_id, consecutive_misses FROM job_listings WHERE source = ? AND is_active = 1",
-        (source,),
-    )
-    rows = await cursor.fetchall()
+    result = db.table("job_listings").select(
+        "external_id, consecutive_misses"
+    ).eq("source", source).eq("is_active", True).execute()
 
     confirmed_removals = set()
     tentative_removals = set()
 
-    for row in rows:
-        ext_id = row[0]
-        misses = row[1]
+    for row in result.data:
+        ext_id = row["external_id"]
+        misses = row["consecutive_misses"]
 
         if ext_id in current_ids:
             # Found — reset consecutive misses
-            await db.execute(
-                "UPDATE job_listings SET consecutive_misses = 0, last_seen = datetime('now') WHERE external_id = ? AND source = ?",
-                (ext_id, source),
-            )
+            db.table("job_listings").update({
+                "consecutive_misses": 0,
+                "last_seen": "now()",
+            }).eq("external_id", ext_id).eq("source", source).execute()
         else:
             # Missing — increment consecutive misses
             new_misses = misses + 1
             if new_misses >= REMOVAL_THRESHOLD:
                 confirmed_removals.add(ext_id)
-                await db.execute(
-                    "UPDATE job_listings SET consecutive_misses = ?, is_active = 0 WHERE external_id = ? AND source = ?",
-                    (new_misses, ext_id, source),
-                )
+                db.table("job_listings").update({
+                    "consecutive_misses": new_misses,
+                    "is_active": False,
+                }).eq("external_id", ext_id).eq("source", source).execute()
             else:
                 tentative_removals.add(ext_id)
-                await db.execute(
-                    "UPDATE job_listings SET consecutive_misses = ? WHERE external_id = ? AND source = ?",
-                    (new_misses, ext_id, source),
-                )
+                db.table("job_listings").update({
+                    "consecutive_misses": new_misses,
+                }).eq("external_id", ext_id).eq("source", source).execute()
 
     return {
         "confirmed_removals": confirmed_removals,

@@ -6,7 +6,7 @@ stored listings, and retrieving trend/insight data.
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Query, HTTPException
 
@@ -31,16 +31,19 @@ router = APIRouter(prefix="/api")
 async def _run_scrape(sources: list) -> dict:
     """Core scrape orchestration — runs all sources sequentially."""
     results = {}
+    db = get_db()
 
     for source_name in sources:
-        db = await get_db()
         try:
-            now = datetime.utcnow().isoformat()
-            await db.execute(
-                "INSERT INTO scrape_runs (source, started_at, status) VALUES (?, ?, 'running')",
-                (source_name, now),
-            )
-            await db.commit()
+            now = datetime.now(timezone.utc).isoformat()
+
+            # Record scrape run start
+            run_result = db.table("scrape_runs").insert({
+                "source": source_name,
+                "started_at": now,
+                "status": "running",
+            }).execute()
+            run_id = run_result.data[0]["id"]
 
             # Fetch raw listings via strategy
             strategy = create_strategy(source_name)
@@ -75,8 +78,8 @@ async def _run_scrape(sources: list) -> dict:
 
             if should_reject(mean_score):
                 logger.warning("Scrape rejected (score %.1f), using fallback", mean_score)
-                fallback = await get_last_successful_scrape(db, source_name)
-                await record_fallback_usage(db, source_name, f"Score {mean_score}")
+                fallback = get_last_successful_scrape(db, source_name)
+                record_fallback_usage(db, source_name, f"Score {mean_score}")
                 results[source_name] = {
                     "status": "fallback",
                     "reason": f"Quality score {mean_score} below threshold",
@@ -85,58 +88,61 @@ async def _run_scrape(sources: list) -> dict:
                 continue
 
             # Change detection
-            cursor = await db.execute(
-                "SELECT external_id FROM job_listings WHERE source = ? AND is_active = 1",
-                (source_name,),
-            )
-            previous_ids = {row[0] for row in await cursor.fetchall()}
+            prev_result = db.table("job_listings").select(
+                "external_id"
+            ).eq("source", source_name).eq("is_active", True).execute()
+            previous_ids = {r["external_id"] for r in prev_result.data}
             current_ids = {l.external_id for l in normalized}
             changes = detect_changes(previous_ids, current_ids)
             summary = build_change_summary(changes)
 
             # Stability tracking
-            stability = await update_stability(db, source_name, current_ids)
+            stability = update_stability(db, source_name, current_ids)
 
             # Upsert listings
-            now_ts = datetime.utcnow().isoformat()
+            now_ts = datetime.now(timezone.utc).isoformat()
             for listing in normalized:
-                tags_json = json.dumps(listing.tags)
-                await db.execute(
-                    """INSERT INTO job_listings
-                       (external_id, source, title, company, location, salary_min,
-                        salary_max, currency, tags, url, posted_at, first_seen,
-                        last_seen, is_active, consecutive_misses, quality_score)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?)
-                       ON CONFLICT(external_id, source) DO UPDATE SET
-                        title=excluded.title, company=excluded.company,
-                        location=excluded.location, salary_min=excluded.salary_min,
-                        salary_max=excluded.salary_max, currency=excluded.currency,
-                        tags=excluded.tags, url=excluded.url,
-                        last_seen=excluded.last_seen, is_active=1,
-                        consecutive_misses=0, quality_score=excluded.quality_score""",
-                    (
-                        listing.external_id, listing.source, listing.title,
-                        listing.company, listing.location, listing.salary_min,
-                        listing.salary_max, listing.currency, tags_json,
-                        listing.url, listing.posted_at, now_ts, now_ts,
-                        listing.quality_score,
-                    ),
-                )
+                existing = db.table("job_listings").select("id").eq(
+                    "external_id", listing.external_id
+                ).eq("source", listing.source).execute()
 
-            # Record scrape run
-            completed_at = datetime.utcnow().isoformat()
-            await db.execute(
-                """UPDATE scrape_runs SET completed_at=?, status='completed',
-                   quality_score=?, total_count=?, added_count=?,
-                   removed_count=?, retained_count=?
-                   WHERE source=? AND started_at=?""",
-                (
-                    completed_at, mean_score, summary["total_count"],
-                    summary["added_count"], summary["removed_count"],
-                    summary["retained_count"], source_name, now,
-                ),
-            )
-            await db.commit()
+                row = {
+                    "external_id": listing.external_id,
+                    "source": listing.source,
+                    "title": listing.title,
+                    "company": listing.company,
+                    "location": listing.location,
+                    "salary_min": listing.salary_min,
+                    "salary_max": listing.salary_max,
+                    "currency": listing.currency,
+                    "tags": listing.tags,
+                    "url": listing.url,
+                    "posted_at": listing.posted_at,
+                    "last_seen": now_ts,
+                    "is_active": True,
+                    "consecutive_misses": 0,
+                    "quality_score": listing.quality_score,
+                }
+
+                if existing.data:
+                    db.table("job_listings").update(row).eq(
+                        "id", existing.data[0]["id"]
+                    ).execute()
+                else:
+                    row["first_seen"] = now_ts
+                    db.table("job_listings").insert(row).execute()
+
+            # Update scrape run as completed
+            completed_at = datetime.now(timezone.utc).isoformat()
+            db.table("scrape_runs").update({
+                "completed_at": completed_at,
+                "status": "completed",
+                "quality_score": mean_score,
+                "total_count": summary["total_count"],
+                "added_count": summary["added_count"],
+                "removed_count": summary["removed_count"],
+                "retained_count": summary["retained_count"],
+            }).eq("id", run_id).execute()
 
             results[source_name] = {
                 "status": "completed",
@@ -149,8 +155,6 @@ async def _run_scrape(sources: list) -> dict:
         except Exception as e:
             logger.error("Scrape failed for %s: %s", source_name, e, exc_info=True)
             results[source_name] = {"status": "failed", "error": str(e)}
-        finally:
-            await db.close()
 
     return results
 
@@ -185,76 +189,46 @@ async def list_jobs(
     limit: int = Query(50, ge=1, le=200),
 ):
     """Query stored job listings with filters."""
-    db = await get_db()
-    try:
-        conditions = ["is_active = 1"]
-        params = []
+    db = get_db()
 
-        if source:
-            conditions.append("source = ?")
-            params.append(source)
-        if location:
-            conditions.append("location LIKE ?")
-            params.append(f"%{location}%")
-        if role:
-            conditions.append("(title LIKE ? OR tags LIKE ?)")
-            params.append(f"%{role}%")
-            params.append(f"%{role}%")
-        if salary_min:
-            conditions.append("salary_min >= ?")
-            params.append(salary_min)
+    query = db.table("job_listings").select(
+        "id, external_id, source, title, company, location, "
+        "salary_min, salary_max, currency, tags, url, posted_at, "
+        "first_seen, last_seen, quality_score",
+        count="exact",
+    ).eq("is_active", True)
 
-        where = " AND ".join(conditions)
-        offset = (page - 1) * limit
+    if source:
+        query = query.eq("source", source)
+    if location:
+        query = query.ilike("location", f"%{location}%")
+    if role:
+        query = query.or_(f"title.ilike.%{role}%,tags.cs.[\"{role}\"]")
+    if salary_min:
+        query = query.gte("salary_min", salary_min)
 
-        # Get total count
-        cursor = await db.execute(
-            f"SELECT COUNT(*) FROM job_listings WHERE {where}", params
-        )
-        total = (await cursor.fetchone())[0]
+    offset = (page - 1) * limit
+    result = query.order("last_seen", desc=True).range(offset, offset + limit - 1).execute()
 
-        # Get page
-        cursor = await db.execute(
-            f"""SELECT id, external_id, source, title, company, location,
-                       salary_min, salary_max, currency, tags, url, posted_at,
-                       first_seen, last_seen, quality_score
-                FROM job_listings WHERE {where}
-                ORDER BY last_seen DESC LIMIT ? OFFSET ?""",
-            params + [limit, offset],
-        )
-        rows = await cursor.fetchall()
-
-        listings = [
-            {
-                "id": r[0], "external_id": r[1], "source": r[2], "title": r[3],
-                "company": r[4], "location": r[5], "salary_min": r[6],
-                "salary_max": r[7], "currency": r[8],
-                "tags": json.loads(r[9]) if r[9] else [],
-                "url": r[10], "posted_at": r[11], "first_seen": r[12],
-                "last_seen": r[13], "quality_score": r[14],
-            }
-            for r in rows
-        ]
-
-        return {"total": total, "page": page, "limit": limit, "listings": listings}
-    finally:
-        await db.close()
+    return {
+        "total": result.count or 0,
+        "page": page,
+        "limit": limit,
+        "listings": result.data,
+    }
 
 
 @router.get("/trends")
 async def get_trends():
     """Get aggregated trend and insight data for the dashboard."""
-    db = await get_db()
-    try:
-        return {
-            "scrape_history": await insights.get_scrape_history(db),
-            "top_tags": await insights.get_top_tags(db),
-            "salary_distribution": await insights.get_salary_distribution(db),
-            "top_companies": await insights.get_top_companies(db),
-            "sources_breakdown": await insights.get_sources_breakdown(db),
-        }
-    finally:
-        await db.close()
+    db = get_db()
+    return {
+        "scrape_history": insights.get_scrape_history(db),
+        "top_tags": insights.get_top_tags(db),
+        "salary_distribution": insights.get_salary_distribution(db),
+        "top_companies": insights.get_top_companies(db),
+        "sources_breakdown": insights.get_sources_breakdown(db),
+    }
 
 
 @router.get("/health")

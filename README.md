@@ -64,6 +64,9 @@ cd JobPulse
 # Install
 pip install -r requirements.txt
 
+# Configure (copy and fill in your Supabase keys)
+cp .env.example .env
+
 # Run
 uvicorn src.main:app --reload
 
@@ -98,7 +101,7 @@ pytest tests/ -v
 ## Tech Stack
 
 - **Python** + **FastAPI** — Async API server
-- **SQLite** (aiosqlite) — Persistent storage
+- **Supabase** (PostgreSQL) — Cloud-hosted persistent storage
 - **httpx** — Async HTTP client
 - **Chart.js** — Dashboard visualizations
 - **Pydantic** — Data validation and schemas
