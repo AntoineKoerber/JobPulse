@@ -1,0 +1,17 @@
+{
+  "source": "remoteok",
+  "base_url": "https://remoteok.com/api",
+  "rate_limit_seconds": 2.0,
+  "request_headers": {
+    "User-Agent": "JobPulse/1.0 (portfolio demo; github.com/AntoineKoerber/JobPulse)"
+  },
+  "field_map": {
+    "id": "id",
+    "title": "position",
+    "company": "company",
+    "location": "location",
+    "tags": "tags",
+    "url": "url",
+    "posted_at": "date"
+  }
+}

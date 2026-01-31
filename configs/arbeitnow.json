@@ -1,0 +1,18 @@
+{
+  "source": "arbeitnow",
+  "base_url": "https://www.arbeitnow.com/api/job-board-api",
+  "rate_limit_seconds": 2.0,
+  "max_pages": 5,
+  "request_headers": {
+    "User-Agent": "JobPulse/1.0 (portfolio demo; github.com/AntoineKoerber/JobPulse)"
+  },
+  "field_map": {
+    "id": "slug",
+    "title": "title",
+    "company": "company_name",
+    "location": "location",
+    "tags": "tags",
+    "url": "url",
+    "posted_at": "created_at"
+  }
+}

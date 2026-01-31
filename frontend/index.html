@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JobPulse — Job Market Dashboard</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <h1 class="logo">JobPulse</h1>
+    <p class="tagline">Real-time job market intelligence</p>
+    <button id="scrape-btn" class="btn btn-primary">Scrape Now</button>
+    <span id="scrape-status" class="status-badge hidden"></span>
+  </div>
+</header>
+
+<main>
+  <!-- Insights Row -->
+  <section class="insights-row">
+    <div class="card stat-card" id="stat-total">
+      <span class="stat-label">Active Listings</span>
+      <span class="stat-value">—</span>
+    </div>
+    <div class="card stat-card" id="stat-sources">
+      <span class="stat-label">Sources</span>
+      <span class="stat-value">—</span>
+    </div>
+    <div class="card stat-card" id="stat-latest">
+      <span class="stat-label">Last Scrape</span>
+      <span class="stat-value">—</span>
+    </div>
+  </section>
+
+  <!-- Charts Row -->
+  <section class="charts-row">
+    <div class="card chart-card">
+      <h2>Top Skills / Tags</h2>
+      <canvas id="tags-chart"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h2>Salary Distribution</h2>
+      <canvas id="salary-chart"></canvas>
+    </div>
+  </section>
+
+  <section class="charts-row">
+    <div class="card chart-card">
+      <h2>Top Hiring Companies</h2>
+      <canvas id="companies-chart"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h2>Scrape History</h2>
+      <canvas id="history-chart"></canvas>
+    </div>
+  </section>
+
+  <!-- Filters -->
+  <section class="filters-bar">
+    <input type="text" id="filter-role" placeholder="Role keyword..." />
+    <input type="text" id="filter-location" placeholder="Location..." />
+    <input type="number" id="filter-salary" placeholder="Min salary..." />
+    <select id="filter-source">
+      <option value="">All Sources</option>
+      <option value="remoteok">RemoteOK</option>
+      <option value="arbeitnow">Arbeitnow</option>
+    </select>
+    <button id="filter-btn" class="btn btn-secondary">Filter</button>
+  </section>
+
+  <!-- Job Listings Table -->
+  <section class="card table-card">
+    <h2>Job Listings</h2>
+    <div class="table-wrap">
+      <table id="jobs-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Company</th>
+            <th>Location</th>
+            <th>Salary</th>
+            <th>Tags</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <button id="prev-page" class="btn btn-sm" disabled>Prev</button>
+      <span id="page-info">Page 1</span>
+      <button id="next-page" class="btn btn-sm">Next</button>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>JobPulse &mdash; Engineering portfolio demo showcasing resilient data pipelines</p>
+</footer>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
