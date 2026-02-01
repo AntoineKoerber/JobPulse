@@ -44,7 +44,7 @@ class JobListing(BaseModel):
 
 class ScrapeRequest(BaseModel):
     """Request to start a scrape."""
-    sources: List[str] = ["remoteok", "arbeitnow"]
+    sources: List[str] = ["remoteok", "arbeitnow", "jobicy"]
 
 
 class ScrapeStatusResponse(BaseModel):

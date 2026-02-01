@@ -11,12 +11,14 @@ import logging
 from src.scraper.base_strategy import BaseScrapeStrategy
 from src.scraper.remoteok_strategy import RemoteOKStrategy
 from src.scraper.arbeitnow_strategy import ArbeitnowStrategy
+from src.scraper.jobicy_strategy import JobicyStrategy
 
 logger = logging.getLogger(__name__)
 
 STRATEGY_MAP = {
     "remoteok": RemoteOKStrategy,
     "arbeitnow": ArbeitnowStrategy,
+    "jobicy": JobicyStrategy,
 }
 
 CONFIGS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "configs")

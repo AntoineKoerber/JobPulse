@@ -436,6 +436,7 @@
     }
     .source-badge.remoteok { background: var(--green-glow); color: var(--green); }
     .source-badge.arbeitnow { background: var(--accent-glow); color: #a5b4fc; }
+    .source-badge.jobicy { background: var(--orange-glow); color: var(--orange); }
 
     .pagination {
       display: flex;
@@ -522,6 +523,7 @@
       <div class="hero-sources">
         <span class="source-pill"><span class="dot green"></span> RemoteOK</span>
         <span class="source-pill"><span class="dot indigo"></span> Arbeitnow</span>
+        <span class="source-pill"><span class="dot" style="background:var(--orange)"></span> Jobicy</span>
         <span class="source-pill">Supabase PostgreSQL</span>
         <span class="source-pill">FastAPI Pipeline</span>
       </div>
@@ -622,6 +624,7 @@
       <option value="">All Sources</option>
       <option value="remoteok">RemoteOK</option>
       <option value="arbeitnow">Arbeitnow</option>
+      <option value="jobicy">Jobicy</option>
     </select>
     <button id="filter-btn" class="btn btn-accent">Search</button>
   </section>
@@ -779,7 +782,7 @@
   }
 
   function fmtSource(s) {
-    const map = { remoteok: 'RemoteOK', arbeitnow: 'Arbeitnow' };
+    const map = { remoteok: 'RemoteOK', arbeitnow: 'Arbeitnow', jobicy: 'Jobicy' };
     return map[s] || s;
   }
 
@@ -794,7 +797,7 @@
       all.forEach(l => { srcCounts[l.source] = (srcCounts[l.source] || 0) + 1; });
       renderDoughnut(srcCounts);
       document.querySelector('#stat-sources .stat-value').textContent = Object.keys(srcCounts).length;
-      document.getElementById('hw-sources').textContent = `${Object.keys(srcCounts).length} / 2`;
+      document.getElementById('hw-sources').textContent = `${Object.keys(srcCounts).length} / 3`;
 
       // Avg quality for hero widget
       const qualRes = await q('job_listings', 'is_active=eq.true&select=quality_score');
@@ -809,9 +812,10 @@
       const topComp = Object.entries(compCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
       renderList('top-companies-list', topComp);
 
-      // Tags
+      // Tags — filter out generic/location terms that aren't skills
+      const skipTags = new Set(['remote','remote work','worldwide','anywhere','full-time','part-time','contract','freelance','hybrid','onsite','on-site','other','n/a','intern','internship']);
       const tagCounts = {};
-      all.forEach(l => (l.tags || []).forEach(t => { const k = t.toLowerCase(); tagCounts[k] = (tagCounts[k] || 0) + 1; }));
+      all.forEach(l => (l.tags || []).forEach(t => { const k = t.toLowerCase().trim(); if (!skipTags.has(k) && k.length > 1) tagCounts[k] = (tagCounts[k] || 0) + 1; }));
       const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
       renderList('top-tags-list', topTags);
 

@@ -1,0 +1,21 @@
+{
+    "source_name": "jobicy",
+    "base_url": "https://jobicy.com/api/v2/remote-jobs",
+    "max_count": 100,
+    "rate_limit_seconds": 2.0,
+    "request_headers": {
+        "User-Agent": "Mozilla/5.0 (compatible; JobPulse/1.0)"
+    },
+    "field_map": {
+        "id": "id",
+        "title": "jobTitle",
+        "company": "companyName",
+        "location": "jobGeo",
+        "url": "url",
+        "posted_at": "pubDate",
+        "tags": "jobIndustry",
+        "salary_min": "salaryMin",
+        "salary_max": "salaryMax",
+        "currency": "salaryCurrency"
+    }
+}
