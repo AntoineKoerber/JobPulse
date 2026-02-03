@@ -433,57 +433,128 @@
     .btn-sm { padding: 0.4rem 1rem; font-size: 0.8rem; border-radius: 8px; }
     .btn-sm:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
 
-    /* ── Table ──────────────────────────────────────── */
+    /* ── Job Listings ─────────────────────────────────── */
     .table-section { margin-bottom: 1.5rem; }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; }
-    thead { position: sticky; top: 0; background: var(--bg-card); z-index: 1; }
-    th {
-      text-align: left;
-      padding: 0.85rem 1rem;
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: var(--text-tertiary);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      border-bottom: 1px solid var(--border);
+    .jobs-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .job-card {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 1rem;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
     }
-    td {
-      padding: 0.85rem 1rem;
-      font-size: 0.88rem;
-      border-bottom: 1px solid var(--border-subtle);
-      vertical-align: middle;
+    .job-card:hover {
+      background: var(--bg-hover);
+      border-color: var(--border);
+      transform: translateX(4px);
+    }
+    .job-card:hover .job-arrow { opacity: 1; color: var(--accent); }
+
+    .job-main { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+    .job-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .job-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .job-company {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.82rem;
+      font-weight: 500;
       color: var(--text-secondary);
     }
-    tr { transition: background 0.12s; }
-    tr:hover td { background: rgba(255,255,255,0.02); }
-    td:first-child { color: var(--text-primary); font-weight: 500; }
-    td a { color: var(--text-primary); text-decoration: none; transition: color 0.15s; }
-    td a:hover { color: #a5b4fc; }
+    .job-company svg { width: 14px; height: 14px; opacity: 0.6; }
+    .job-location {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.78rem;
+      color: var(--text-tertiary);
+    }
+    .job-location svg { width: 12px; height: 12px; opacity: 0.5; }
+    .job-tags { display: flex; gap: 0.3rem; margin-top: 0.25rem; }
+
+    .job-salary-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.3rem;
+      min-width: 100px;
+    }
+    .job-salary {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--green);
+      white-space: nowrap;
+    }
+    .job-salary.none {
+      font-size: 0.78rem;
+      font-weight: 400;
+      color: var(--text-tertiary);
+    }
+    .job-source {
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .job-source.remoteok { background: var(--green-glow); color: var(--green); }
+    .job-source.arbeitnow { background: var(--accent-glow); color: #a5b4fc; }
+    .job-source.jobicy { background: var(--orange-glow); color: var(--orange); }
+
+    .job-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      color: var(--text-tertiary);
+      opacity: 0.4;
+      transition: all 0.15s;
+    }
+    .job-arrow svg { width: 18px; height: 18px; }
 
     .tag {
       display: inline-block;
-      padding: 0.18rem 0.55rem;
+      padding: 0.15rem 0.5rem;
       background: rgba(99,102,241,0.08);
       color: #a5b4fc;
-      border-radius: 6px;
-      font-size: 0.72rem;
+      border-radius: 4px;
+      font-size: 0.68rem;
       font-weight: 500;
-      margin: 0.1rem;
     }
-    .salary { white-space: nowrap; font-weight: 600; color: var(--green); font-size: 0.85rem; }
-    .salary.none { color: var(--text-tertiary); font-weight: 400; }
 
-    .source-badge {
-      padding: 0.25rem 0.65rem;
-      border-radius: 6px;
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
+    .no-results {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-tertiary);
+      font-size: 0.9rem;
     }
-    .source-badge.remoteok { background: var(--green-glow); color: var(--green); }
-    .source-badge.arbeitnow { background: var(--accent-glow); color: #a5b4fc; }
-    .source-badge.jobicy { background: var(--orange-glow); color: var(--orange); }
+
+    @media (max-width: 700px) {
+      .job-card { grid-template-columns: 1fr auto; gap: 0.75rem; }
+      .job-salary-col { min-width: auto; }
+      .job-arrow { display: none; }
+    }
 
     .pagination {
       display: flex;
@@ -715,28 +786,14 @@
     </div>
   </section>
 
-  <!-- ── Table ────────────────────────────────────── -->
+  <!-- ── Job Listings ─────────────────────────────── -->
   <section class="card table-section">
     <div class="card-header">
       <span class="card-title">Job Listings</span>
       <span class="card-badge" id="results-count">—</span>
     </div>
-    <div class="table-wrap">
-      <table id="jobs-table">
-        <thead>
-          <tr>
-            <th>Position</th>
-            <th>Company</th>
-            <th>Location</th>
-            <th>Salary</th>
-            <th>Skills</th>
-            <th>Source</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td colspan="6" class="loading-cell"><span class="spinner"></span>Loading listings...</td></tr>
-        </tbody>
-      </table>
+    <div class="jobs-list" id="jobs-list">
+      <div class="no-results"><span class="spinner"></span> Loading listings...</div>
     </div>
     <div class="pagination">
       <button id="prev-page" class="btn btn-ghost btn-sm" disabled>&larr; Previous</button>
@@ -859,24 +916,43 @@
   }
 
   function renderTable(jobs) {
-    const tb = document.querySelector('#jobs-table tbody');
+    const list = document.getElementById('jobs-list');
     if (!jobs.length) {
-      tb.innerHTML = '<tr><td colspan="6" class="loading-cell">No listings match your filters</td></tr>';
+      list.innerHTML = '<div class="no-results">No listings match your filters</div>';
       return;
     }
-    tb.innerHTML = jobs.map(j => {
+    list.innerHTML = jobs.map(j => {
       const sal = fmtSal(j.salary_min, j.salary_max, j.currency);
       const title = esc(titleCase(decodeHtml(j.title)));
       const company = esc(titleCase(decodeHtml(j.company)));
-      const loc = esc(titleCase(decodeHtml(j.location) || '—'));
-      return `<tr>
-        <td>${j.url ? `<a href="${j.url}" target="_blank" rel="noopener">${title}</a>` : title}</td>
-        <td>${company}</td>
-        <td>${loc}</td>
-        <td><span class="salary${!j.salary_min && !j.salary_max ? ' none' : ''}">${sal}</span></td>
-        <td>${(j.tags || []).slice(0, 3).map(t => `<span class="tag">${esc(fmtTag(t))}</span>`).join('')}</td>
-        <td><span class="source-badge ${j.source}">${fmtSource(j.source)}</span></td>
-      </tr>`;
+      const loc = esc(titleCase(decodeHtml(j.location) || 'Remote'));
+      const hasSalary = j.salary_min || j.salary_max;
+      const tags = (j.tags || []).slice(0, 3).map(t => `<span class="tag">${esc(fmtTag(t))}</span>`).join('');
+      const url = j.url || '#';
+
+      return `<a href="${url}" target="_blank" rel="noopener" class="job-card">
+        <div class="job-main">
+          <div class="job-title">${title}</div>
+          <div class="job-meta">
+            <span class="job-company">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16"/></svg>
+              ${company}
+            </span>
+            <span class="job-location">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              ${loc}
+            </span>
+          </div>
+          ${tags ? `<div class="job-tags">${tags}</div>` : ''}
+        </div>
+        <div class="job-salary-col">
+          <span class="job-salary${hasSalary ? '' : ' none'}">${sal}</span>
+          <span class="job-source ${j.source}">${fmtSource(j.source)}</span>
+        </div>
+        <div class="job-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </a>`;
     }).join('');
   }
 
