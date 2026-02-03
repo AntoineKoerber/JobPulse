@@ -479,15 +479,45 @@
 
     .job-location {
       display: flex;
-      align-items: center;
-      gap: 0.3rem;
+      flex-direction: column;
+      gap: 0.25rem;
       font-size: 0.8rem;
       color: var(--text-secondary);
+      min-width: 0;
+    }
+    .job-location-text {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .job-location svg { width: 13px; height: 13px; opacity: 0.5; flex-shrink: 0; }
+
+    .work-type {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.18rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      width: fit-content;
+    }
+    .work-type.remote {
+      background: rgba(34, 197, 94, 0.12);
+      color: #4ade80;
+    }
+    .work-type.hybrid {
+      background: rgba(251, 191, 36, 0.12);
+      color: #fbbf24;
+    }
+    .work-type.onsite {
+      background: rgba(99, 102, 241, 0.1);
+      color: #a5b4fc;
+    }
+    .work-type svg { width: 10px; height: 10px; }
 
     .job-tags { display: flex; gap: 0.25rem; flex-wrap: wrap; }
 
@@ -949,10 +979,12 @@
       const sal = fmtSal(j.salary_min, j.salary_max, j.currency);
       const title = esc(titleCase(decodeHtml(j.title)));
       const company = esc(titleCase(decodeHtml(j.company)));
-      const loc = esc(titleCase(decodeHtml(j.location) || 'Remote'));
+      const rawLoc = decodeHtml(j.location) || '';
+      const loc = esc(titleCase(rawLoc) || '—');
       const hasSalary = j.salary_min || j.salary_max;
       const tags = (j.tags || []).slice(0, 2).map(t => `<span class="tag">${esc(fmtTag(t))}</span>`).join('');
       const url = j.url || '#';
+      const workType = getWorkType(rawLoc, j.source, j.tags);
 
       return `<a href="${url}" target="_blank" rel="noopener" class="job-card">
         <div class="job-main">
@@ -962,10 +994,13 @@
             ${company}
           </span>
         </div>
-        <span class="job-location">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          ${loc}
-        </span>
+        <div class="job-location">
+          <span class="job-location-text">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            ${loc}
+          </span>
+          ${workTypeBadge(workType)}
+        </div>
         <div class="job-tags">${tags || '<span class="tag" style="opacity:0.3">—</span>'}</div>
         <span class="job-salary${hasSalary ? '' : ' none'}">${sal}</span>
         <span class="job-source ${j.source}">${fmtSource(j.source)}</span>
@@ -1015,6 +1050,39 @@
   function fmtSource(s) {
     const map = { remoteok: 'RemoteOK', arbeitnow: 'Arbeitnow', jobicy: 'Jobicy' };
     return map[s] || s;
+  }
+
+  function getWorkType(location, source, tags) {
+    const loc = (location || '').toLowerCase();
+    const allTags = (tags || []).map(t => t.toLowerCase()).join(' ');
+    const combined = loc + ' ' + allTags;
+
+    // RemoteOK and Jobicy are remote-first boards
+    if (source === 'remoteok' || source === 'jobicy') return 'remote';
+
+    // Check for hybrid indicators
+    if (combined.includes('hybrid')) return 'hybrid';
+
+    // Check for remote indicators
+    if (combined.includes('remote') || combined.includes('worldwide') || combined.includes('anywhere')) return 'remote';
+
+    // Check for on-site indicators
+    if (combined.includes('on-site') || combined.includes('onsite') || combined.includes('in-office')) return 'onsite';
+
+    // Default: if has specific city/country, likely on-site
+    if (loc && !loc.includes('remote') && loc.length > 2) return 'onsite';
+
+    return 'remote'; // Default for job boards
+  }
+
+  function workTypeBadge(type) {
+    const icons = {
+      remote: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>',
+      hybrid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>',
+      onsite: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>'
+    };
+    const labels = { remote: 'Remote', hybrid: 'Hybrid', onsite: 'On-site' };
+    return `<span class="work-type ${type}">${icons[type]}${labels[type]}</span>`;
   }
 
   // ── Insights ──────────────────────────────────
