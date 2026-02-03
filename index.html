@@ -890,6 +890,11 @@
           <label class="chip"><input type="checkbox" value="hybrid">Hybrid</label>
           <label class="chip"><input type="checkbox" value="onsite">On-site</label>
         </div>
+        <span class="filter-box-label" style="margin-top:0.75rem">Salary Info</span>
+        <div class="checkbox-group" id="salary-chips">
+          <label class="chip"><input type="checkbox" value="has">Has Salary</label>
+          <label class="chip"><input type="checkbox" value="none">No Salary</label>
+        </div>
       </div>
     </div>
   </section>
@@ -1081,6 +1086,7 @@
     const seniority = getSelectedChips('seniority-chips');
     const roleTypes = getSelectedChips('role-chips');
     const workTypes = getSelectedChips('worktype-chips');
+    const salaryInfo = getSelectedChips('salary-chips');
 
     let f = 'is_active=eq.true&order=last_seen.desc';
     if (src) f += `&source=eq.${src}`;
@@ -1116,6 +1122,15 @@
       if (workTypes.includes('hybrid')) wtConds.push('location.ilike.*hybrid*');
       if (workTypes.includes('onsite')) wtConds.push('and(source.eq.arbeitnow,not.location.ilike.*remote*)');
       if (wtConds.length) f += `&or=(${wtConds.join(',')})`;
+    }
+
+    // Salary info filter
+    if (salaryInfo.length === 1) {
+      if (salaryInfo[0] === 'has') {
+        f += '&or=(salary_min.not.is.null,salary_max.not.is.null)';
+      } else if (salaryInfo[0] === 'none') {
+        f += '&salary_min=is.null&salary_max=is.null';
+      }
     }
 
     const off = (page - 1) * PAGE_SIZE;
