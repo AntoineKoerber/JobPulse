@@ -407,6 +407,40 @@
     select.filter-input { cursor: pointer; }
     option { background: var(--bg-card); color: var(--text-primary); }
 
+    /* Autocomplete */
+    .autocomplete-wrap { position: relative; flex: 1; min-width: 150px; }
+    .autocomplete-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+    .autocomplete-list.show { display: block; }
+    .autocomplete-item {
+      padding: 0.6rem 1rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .autocomplete-item:hover, .autocomplete-item.active {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+    .autocomplete-item mark {
+      background: transparent;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
     .btn {
       padding: 0.65rem 1.4rem;
       border: none;
@@ -783,8 +817,14 @@
   <section class="filter-section">
     <div class="filter-row">
       <div class="filters">
-        <input class="filter-input" type="text" id="filter-role" placeholder="Search by role..." />
-        <input class="filter-input" type="text" id="filter-location" placeholder="Location..." />
+        <div class="autocomplete-wrap">
+          <input class="filter-input" type="text" id="filter-role" placeholder="Search by role..." autocomplete="off" />
+          <div class="autocomplete-list" id="role-suggestions"></div>
+        </div>
+        <div class="autocomplete-wrap">
+          <input class="filter-input" type="text" id="filter-location" placeholder="Location..." autocomplete="off" />
+          <div class="autocomplete-list" id="location-suggestions"></div>
+        </div>
         <input class="filter-input" type="number" id="filter-salary" placeholder="Min salary..." />
         <select class="filter-input" id="filter-source">
           <option value="">All Sources</option>
@@ -827,6 +867,14 @@
           <label class="chip"><input type="checkbox" value="devops,sre,infrastructure,cloud">DevOps</label>
           <label class="chip"><input type="checkbox" value="security">Security</label>
           <label class="chip"><input type="checkbox" value="ai,ml,machine learning">AI/ML</label>
+        </div>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">Work Type</span>
+        <div class="checkbox-group" id="worktype-chips">
+          <label class="chip"><input type="checkbox" value="remote">Remote</label>
+          <label class="chip"><input type="checkbox" value="hybrid">Hybrid</label>
+          <label class="chip"><input type="checkbox" value="onsite">On-site</label>
         </div>
       </div>
     </div>
@@ -882,6 +930,8 @@
   let page = 1;
   const PAGE_SIZE = 50;
   let salaryChart, historyChart, doughnutChart;
+  let allLocations = [];
+  let allRoles = [];
 
   // ── Decode HTML entities ─────────────────────
   function decodeHtml(s) {
@@ -889,6 +939,88 @@
     const txt = document.createElement('textarea');
     txt.innerHTML = s;
     return txt.value;
+  }
+
+  // ── Autocomplete ─────────────────────────────
+  async function loadSuggestions() {
+    try {
+      const res = await q('job_listings', 'is_active=eq.true&select=location,title');
+      const data = await res.json();
+
+      // Unique locations
+      const locSet = new Set();
+      data.forEach(d => { if (d.location && d.location.length > 1) locSet.add(d.location); });
+      allLocations = [...locSet].sort();
+
+      // Common role keywords from titles
+      const roleWords = {};
+      const rolePatterns = ['engineer', 'developer', 'manager', 'designer', 'analyst', 'director', 'lead', 'senior', 'junior', 'architect', 'consultant', 'specialist', 'coordinator', 'associate', 'assistant', 'intern', 'head', 'vp', 'chief', 'officer', 'admin', 'support', 'sales', 'marketing', 'product', 'project', 'data', 'software', 'frontend', 'backend', 'fullstack', 'devops', 'cloud', 'security', 'qa', 'test', 'mobile', 'ios', 'android', 'web', 'ui', 'ux', 'hr', 'finance', 'operations', 'customer', 'success', 'account', 'business', 'content', 'writer', 'editor'];
+      data.forEach(d => {
+        const words = (d.title || '').toLowerCase().split(/\s+/);
+        words.forEach(w => {
+          if (rolePatterns.some(p => w.includes(p)) && w.length > 2) {
+            roleWords[w] = (roleWords[w] || 0) + 1;
+          }
+        });
+      });
+      allRoles = Object.entries(roleWords).filter(([k, v]) => v >= 3).sort((a, b) => b[1] - a[1]).map(([k]) => k);
+    } catch (e) { console.error('Failed to load suggestions', e); }
+  }
+
+  function setupAutocomplete(inputId, listId, getSuggestions) {
+    const input = document.getElementById(inputId);
+    const list = document.getElementById(listId);
+    let activeIdx = -1;
+
+    input.addEventListener('input', () => {
+      const val = input.value.toLowerCase().trim();
+      if (val.length < 1) { list.classList.remove('show'); return; }
+
+      const matches = getSuggestions().filter(s => s.toLowerCase().includes(val)).slice(0, 8);
+      if (!matches.length) { list.classList.remove('show'); return; }
+
+      list.innerHTML = matches.map(m => {
+        const idx = m.toLowerCase().indexOf(val);
+        const highlighted = m.slice(0, idx) + '<mark>' + m.slice(idx, idx + val.length) + '</mark>' + m.slice(idx + val.length);
+        return `<div class="autocomplete-item">${highlighted}</div>`;
+      }).join('');
+      list.classList.add('show');
+      activeIdx = -1;
+
+      list.querySelectorAll('.autocomplete-item').forEach((item, i) => {
+        item.addEventListener('click', () => {
+          input.value = matches[i];
+          list.classList.remove('show');
+          page = 1;
+          loadJobs();
+        });
+      });
+    });
+
+    input.addEventListener('keydown', e => {
+      const items = list.querySelectorAll('.autocomplete-item');
+      if (!list.classList.contains('show') || !items.length) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIdx = Math.min(activeIdx + 1, items.length - 1);
+        items.forEach((it, i) => it.classList.toggle('active', i === activeIdx));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIdx = Math.max(activeIdx - 1, 0);
+        items.forEach((it, i) => it.classList.toggle('active', i === activeIdx));
+      } else if (e.key === 'Enter' && activeIdx >= 0) {
+        e.preventDefault();
+        input.value = items[activeIdx].textContent;
+        list.classList.remove('show');
+        page = 1;
+        loadJobs();
+      } else if (e.key === 'Escape') {
+        list.classList.remove('show');
+      }
+    });
+
+    input.addEventListener('blur', () => { setTimeout(() => list.classList.remove('show'), 150); });
   }
 
   // ── Chip toggle ─────────────────────────────
@@ -934,6 +1066,7 @@
     const src = document.getElementById('filter-source').value;
     const seniority = getSelectedChips('seniority-chips');
     const roleTypes = getSelectedChips('role-chips');
+    const workTypes = getSelectedChips('worktype-chips');
 
     let f = 'is_active=eq.true&order=last_seen.desc';
     if (src) f += `&source=eq.${src}`;
@@ -951,6 +1084,24 @@
     if (roleTypes.length) {
       const roleOr = roleTypes.map(r => `title.ilike.*${encodeURIComponent(r)}*`).join(',');
       f += `&or=(${roleOr})`;
+    }
+
+    // Work type filter
+    if (workTypes.length === 1) {
+      if (workTypes[0] === 'remote') {
+        f += '&or=(source.in.(remoteok,jobicy),location.ilike.*remote*)';
+      } else if (workTypes[0] === 'hybrid') {
+        f += '&location=ilike.*hybrid*';
+      } else if (workTypes[0] === 'onsite') {
+        f += '&source=eq.arbeitnow&not.location=ilike.*remote*';
+      }
+    } else if (workTypes.length > 1) {
+      // Multiple work types - build OR conditions
+      const wtConds = [];
+      if (workTypes.includes('remote')) wtConds.push('source.in.(remoteok,jobicy)', 'location.ilike.*remote*');
+      if (workTypes.includes('hybrid')) wtConds.push('location.ilike.*hybrid*');
+      if (workTypes.includes('onsite')) wtConds.push('and(source.eq.arbeitnow,not.location.ilike.*remote*)');
+      if (wtConds.length) f += `&or=(${wtConds.join(',')})`;
     }
 
     const off = (page - 1) * PAGE_SIZE;
@@ -1221,6 +1372,10 @@
   // ── Init ──────────────────────────────────────
   loadJobs();
   loadInsights();
+  loadSuggestions().then(() => {
+    setupAutocomplete('filter-role', 'role-suggestions', () => allRoles);
+    setupAutocomplete('filter-location', 'location-suggestions', () => allLocations);
+  });
 })();
 </script>
 </body>
