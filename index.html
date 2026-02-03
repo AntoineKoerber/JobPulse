@@ -336,79 +336,40 @@
 
     /* ── Filters ───────────────────────────────────── */
     .filter-section {
+      margin-bottom: 1.5rem;
+    }
+
+    /* Search bar */
+    .search-bar {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 1.25rem;
-      margin-bottom: 1.5rem;
-    }
-    .filter-row {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-    .filter-row:last-child { margin-bottom: 0; }
-    .filter-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .filter-group-label {
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-tertiary);
-    }
-    .checkbox-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-    }
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.35rem 0.7rem;
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: 100px;
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: all 0.15s;
-      user-select: none;
-    }
-    .chip:hover { background: var(--bg-hover); color: var(--text-primary); }
-    .chip.active { background: var(--accent-glow); border-color: rgba(99,102,241,0.3); color: #a5b4fc; }
-    .chip input { display: none; }
-    .filters {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      align-items: center;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
     }
     .filter-input {
-      padding: 0.65rem 1rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.9rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
       color: var(--text-primary);
-      font-size: 0.88rem;
+      font-size: 0.85rem;
       font-family: inherit;
-      flex: 1;
-      min-width: 150px;
       transition: border-color 0.2s;
       outline: none;
     }
-    .filter-input:focus { border-color: rgba(99,102,241,0.4); }
+    .filter-input:focus { border-color: rgba(99,102,241,0.4); background: var(--bg-hover); }
     .filter-input::placeholder { color: var(--text-tertiary); }
-    select.filter-input { cursor: pointer; }
+    select.filter-input { cursor: pointer; min-width: 120px; }
     option { background: var(--bg-card); color: var(--text-primary); }
 
     /* Autocomplete */
-    .autocomplete-wrap { position: relative; flex: 1; min-width: 150px; }
+    .autocomplete-wrap { position: relative; flex: 1; min-width: 140px; }
+    .autocomplete-wrap .filter-input { width: 100%; }
     .autocomplete-list {
       position: absolute;
       top: 100%;
@@ -417,7 +378,7 @@
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-top: none;
-      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      border-radius: 0 0 8px 8px;
       max-height: 200px;
       overflow-y: auto;
       z-index: 100;
@@ -425,8 +386,8 @@
     }
     .autocomplete-list.show { display: block; }
     .autocomplete-item {
-      padding: 0.6rem 1rem;
-      font-size: 0.85rem;
+      padding: 0.55rem 0.9rem;
+      font-size: 0.82rem;
       color: var(--text-secondary);
       cursor: pointer;
       transition: background 0.1s;
@@ -439,6 +400,58 @@
       background: transparent;
       color: var(--accent);
       font-weight: 600;
+    }
+
+    /* Filter chips grid */
+    .filter-chips-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+    .filter-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem;
+    }
+    .filter-box-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-tertiary);
+      margin-bottom: 0.6rem;
+      display: block;
+    }
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.3rem 0.6rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.12s;
+      user-select: none;
+    }
+    .chip:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border); }
+    .chip.active { background: var(--accent-glow); border-color: rgba(99,102,241,0.35); color: #a5b4fc; }
+    .chip input { display: none; }
+
+    @media (max-width: 800px) {
+      .filter-chips-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 550px) {
+      .filter-chips-grid { grid-template-columns: 1fr; }
+      .search-bar { flex-direction: column; }
+      .search-bar > *, .autocomplete-wrap { width: 100%; min-width: 0; }
     }
 
     .btn {
@@ -815,30 +828,31 @@
 
   <!-- ── Filters ──────────────────────────────────── -->
   <section class="filter-section">
-    <div class="filter-row">
-      <div class="filters">
-        <div class="autocomplete-wrap">
-          <input class="filter-input" type="text" id="filter-role" placeholder="Search by role..." autocomplete="off" />
-          <div class="autocomplete-list" id="role-suggestions"></div>
-        </div>
-        <div class="autocomplete-wrap">
-          <input class="filter-input" type="text" id="filter-location" placeholder="Location..." autocomplete="off" />
-          <div class="autocomplete-list" id="location-suggestions"></div>
-        </div>
-        <input class="filter-input" type="number" id="filter-salary" placeholder="Min salary..." />
-        <select class="filter-input" id="filter-source">
-          <option value="">All Sources</option>
-          <option value="remoteok">RemoteOK</option>
-          <option value="arbeitnow">Arbeitnow</option>
-          <option value="jobicy">Jobicy</option>
-        </select>
-        <button id="filter-btn" class="btn btn-accent">Search</button>
-        <button id="clear-btn" class="btn btn-ghost">Clear</button>
+    <!-- Search Bar -->
+    <div class="search-bar">
+      <div class="autocomplete-wrap">
+        <input class="filter-input" type="text" id="filter-role" placeholder="Job title or keyword..." autocomplete="off" />
+        <div class="autocomplete-list" id="role-suggestions"></div>
       </div>
+      <div class="autocomplete-wrap">
+        <input class="filter-input" type="text" id="filter-location" placeholder="City or country..." autocomplete="off" />
+        <div class="autocomplete-list" id="location-suggestions"></div>
+      </div>
+      <input class="filter-input" type="number" id="filter-salary" placeholder="Min salary..." style="max-width:130px" />
+      <select class="filter-input" id="filter-source">
+        <option value="">All Sources</option>
+        <option value="remoteok">RemoteOK</option>
+        <option value="arbeitnow">Arbeitnow</option>
+        <option value="jobicy">Jobicy</option>
+      </select>
+      <button id="filter-btn" class="btn btn-accent">Search</button>
+      <button id="clear-btn" class="btn btn-ghost">Clear</button>
     </div>
-    <div class="filter-row">
-      <div class="filter-group">
-        <span class="filter-group-label">Seniority</span>
+
+    <!-- Filter Chips -->
+    <div class="filter-chips-grid">
+      <div class="filter-box">
+        <span class="filter-box-label">Seniority Level</span>
         <div class="checkbox-group" id="seniority-chips">
           <label class="chip"><input type="checkbox" value="senior">Senior</label>
           <label class="chip"><input type="checkbox" value="mid">Mid-Level</label>
@@ -850,10 +864,9 @@
           <label class="chip"><input type="checkbox" value="principal">Principal</label>
         </div>
       </div>
-    </div>
-    <div class="filter-row">
-      <div class="filter-group">
-        <span class="filter-group-label">Role Type</span>
+
+      <div class="filter-box">
+        <span class="filter-box-label">Role Category</span>
         <div class="checkbox-group" id="role-chips">
           <label class="chip"><input type="checkbox" value="engineer,developer,software">Engineering</label>
           <label class="chip"><input type="checkbox" value="data,analytics,scientist">Data</label>
@@ -863,14 +876,15 @@
           <label class="chip"><input type="checkbox" value="sales,business,account">Sales</label>
           <label class="chip"><input type="checkbox" value="hr,recruiting,people,talent">HR</label>
           <label class="chip"><input type="checkbox" value="support,customer,success">Support</label>
-          <label class="chip"><input type="checkbox" value="operations,ops">Operations</label>
+          <label class="chip"><input type="checkbox" value="operations,ops">Ops</label>
           <label class="chip"><input type="checkbox" value="devops,sre,infrastructure,cloud">DevOps</label>
           <label class="chip"><input type="checkbox" value="security">Security</label>
           <label class="chip"><input type="checkbox" value="ai,ml,machine learning">AI/ML</label>
         </div>
       </div>
-      <div class="filter-group">
-        <span class="filter-group-label">Work Type</span>
+
+      <div class="filter-box">
+        <span class="filter-box-label">Work Arrangement</span>
         <div class="checkbox-group" id="worktype-chips">
           <label class="chip"><input type="checkbox" value="remote">Remote</label>
           <label class="chip"><input type="checkbox" value="hybrid">Hybrid</label>
