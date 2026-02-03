@@ -335,10 +335,57 @@
     .insight-list .value { font-weight: 700; color: var(--text-primary); }
 
     /* ── Filters ───────────────────────────────────── */
+    .filter-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .filter-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .filter-row:last-child { margin-bottom: 0; }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .filter-group-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-tertiary);
+    }
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.7rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .chip:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .chip.active { background: var(--accent-glow); border-color: rgba(99,102,241,0.3); color: #a5b4fc; }
+    .chip input { display: none; }
     .filters {
       display: flex;
       gap: 0.75rem;
-      margin-bottom: 1.5rem;
       flex-wrap: wrap;
       align-items: center;
     }
@@ -616,17 +663,56 @@
   </section>
 
   <!-- ── Filters ──────────────────────────────────── -->
-  <section class="filters">
-    <input class="filter-input" type="text" id="filter-role" placeholder="Search by role..." />
-    <input class="filter-input" type="text" id="filter-location" placeholder="Location..." />
-    <input class="filter-input" type="number" id="filter-salary" placeholder="Min salary..." />
-    <select class="filter-input" id="filter-source">
-      <option value="">All Sources</option>
-      <option value="remoteok">RemoteOK</option>
-      <option value="arbeitnow">Arbeitnow</option>
-      <option value="jobicy">Jobicy</option>
-    </select>
-    <button id="filter-btn" class="btn btn-accent">Search</button>
+  <section class="filter-section">
+    <div class="filter-row">
+      <div class="filters">
+        <input class="filter-input" type="text" id="filter-role" placeholder="Search by role..." />
+        <input class="filter-input" type="text" id="filter-location" placeholder="Location..." />
+        <input class="filter-input" type="number" id="filter-salary" placeholder="Min salary..." />
+        <select class="filter-input" id="filter-source">
+          <option value="">All Sources</option>
+          <option value="remoteok">RemoteOK</option>
+          <option value="arbeitnow">Arbeitnow</option>
+          <option value="jobicy">Jobicy</option>
+        </select>
+        <button id="filter-btn" class="btn btn-accent">Search</button>
+        <button id="clear-btn" class="btn btn-ghost">Clear</button>
+      </div>
+    </div>
+    <div class="filter-row">
+      <div class="filter-group">
+        <span class="filter-group-label">Seniority</span>
+        <div class="checkbox-group" id="seniority-chips">
+          <label class="chip"><input type="checkbox" value="senior">Senior</label>
+          <label class="chip"><input type="checkbox" value="mid">Mid-Level</label>
+          <label class="chip"><input type="checkbox" value="junior">Junior</label>
+          <label class="chip"><input type="checkbox" value="lead">Lead</label>
+          <label class="chip"><input type="checkbox" value="manager">Manager</label>
+          <label class="chip"><input type="checkbox" value="director">Director</label>
+          <label class="chip"><input type="checkbox" value="staff">Staff</label>
+          <label class="chip"><input type="checkbox" value="principal">Principal</label>
+        </div>
+      </div>
+    </div>
+    <div class="filter-row">
+      <div class="filter-group">
+        <span class="filter-group-label">Role Type</span>
+        <div class="checkbox-group" id="role-chips">
+          <label class="chip"><input type="checkbox" value="engineer,developer,software">Engineering</label>
+          <label class="chip"><input type="checkbox" value="data,analytics,scientist">Data</label>
+          <label class="chip"><input type="checkbox" value="product">Product</label>
+          <label class="chip"><input type="checkbox" value="design,ux,ui">Design</label>
+          <label class="chip"><input type="checkbox" value="marketing">Marketing</label>
+          <label class="chip"><input type="checkbox" value="sales,business,account">Sales</label>
+          <label class="chip"><input type="checkbox" value="hr,recruiting,people,talent">HR</label>
+          <label class="chip"><input type="checkbox" value="support,customer,success">Support</label>
+          <label class="chip"><input type="checkbox" value="operations,ops">Operations</label>
+          <label class="chip"><input type="checkbox" value="devops,sre,infrastructure,cloud">DevOps</label>
+          <label class="chip"><input type="checkbox" value="security">Security</label>
+          <label class="chip"><input type="checkbox" value="ai,ml,machine learning">AI/ML</label>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ── Table ────────────────────────────────────── -->
@@ -686,13 +772,48 @@
   const PAGE_SIZE = 50;
   let salaryChart, historyChart, doughnutChart;
 
+  // ── Decode HTML entities ─────────────────────
+  function decodeHtml(s) {
+    if (!s) return '';
+    const txt = document.createElement('textarea');
+    txt.innerHTML = s;
+    return txt.value;
+  }
+
+  // ── Chip toggle ─────────────────────────────
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      chip.classList.toggle('active');
+      chip.querySelector('input').checked = chip.classList.contains('active');
+      page = 1;
+      loadJobs();
+    });
+  });
+
   // ── Enter on filters ──────────────────────────
   document.querySelectorAll('.filter-input').forEach(el => {
     el.addEventListener('keydown', e => { if (e.key === 'Enter') { page = 1; loadJobs(); } });
   });
   document.getElementById('filter-btn').addEventListener('click', () => { page = 1; loadJobs(); });
+  document.getElementById('clear-btn').addEventListener('click', () => {
+    document.getElementById('filter-role').value = '';
+    document.getElementById('filter-location').value = '';
+    document.getElementById('filter-salary').value = '';
+    document.getElementById('filter-source').value = '';
+    document.querySelectorAll('.chip').forEach(c => { c.classList.remove('active'); c.querySelector('input').checked = false; });
+    page = 1;
+    loadJobs();
+  });
   document.getElementById('prev-page').addEventListener('click', () => { if (page > 1) { page--; loadJobs(); } });
   document.getElementById('next-page').addEventListener('click', () => { page++; loadJobs(); });
+
+  // ── Get selected chips ───────────────────────
+  function getSelectedChips(containerId) {
+    const chips = document.querySelectorAll(`#${containerId} .chip.active input`);
+    const values = [];
+    chips.forEach(c => values.push(...c.value.split(',')));
+    return values;
+  }
 
   // ── Jobs Table ────────────────────────────────
   async function loadJobs() {
@@ -700,12 +821,26 @@
     const loc = document.getElementById('filter-location').value.trim();
     const sal = document.getElementById('filter-salary').value;
     const src = document.getElementById('filter-source').value;
+    const seniority = getSelectedChips('seniority-chips');
+    const roleTypes = getSelectedChips('role-chips');
 
     let f = 'is_active=eq.true&order=last_seen.desc';
     if (src) f += `&source=eq.${src}`;
     if (loc) f += `&location=ilike.*${encodeURIComponent(loc)}*`;
     if (role) f += `&or=(title.ilike.*${encodeURIComponent(role)}*,tags.cs.["${role}"])`;
     if (sal) f += `&salary_min=gte.${sal}`;
+
+    // Seniority filter (OR within group)
+    if (seniority.length) {
+      const seniorityOr = seniority.map(s => `title.ilike.*${s}*`).join(',');
+      f += `&or=(${seniorityOr})`;
+    }
+
+    // Role type filter (OR within group)
+    if (roleTypes.length) {
+      const roleOr = roleTypes.map(r => `title.ilike.*${encodeURIComponent(r)}*`).join(',');
+      f += `&or=(${roleOr})`;
+    }
 
     const off = (page - 1) * PAGE_SIZE;
     try {
@@ -731,9 +866,9 @@
     }
     tb.innerHTML = jobs.map(j => {
       const sal = fmtSal(j.salary_min, j.salary_max, j.currency);
-      const title = esc(titleCase(j.title));
-      const company = esc(titleCase(j.company));
-      const loc = esc(titleCase(j.location || '—'));
+      const title = esc(titleCase(decodeHtml(j.title)));
+      const company = esc(titleCase(decodeHtml(j.company)));
+      const loc = esc(titleCase(decodeHtml(j.location) || '—'));
       return `<tr>
         <td>${j.url ? `<a href="${j.url}" target="_blank" rel="noopener">${title}</a>` : title}</td>
         <td>${company}</td>

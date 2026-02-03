@@ -5,6 +5,7 @@ Jobicy provides salary data for ~50% of listings, making it
 a valuable source for compensation analytics.
 """
 
+import html
 import httpx
 import logging
 from typing import List
@@ -55,11 +56,14 @@ class JobicyStrategy(BaseScrapeStrategy):
             salary_max = item.get(field_map.get("salary_max", "salaryMax"))
             currency = item.get(field_map.get("currency", "salaryCurrency"), "")
 
+            raw_title = item.get(field_map.get("title", "jobTitle"), "")
+            raw_company = item.get(field_map.get("company", "companyName"), "")
+
             listings.append(RawJobListing(
                 external_id=ext_id,
                 source="jobicy",
-                title=item.get(field_map.get("title", "jobTitle"), ""),
-                company=item.get(field_map.get("company", "companyName"), ""),
+                title=html.unescape(raw_title),
+                company=html.unescape(raw_company),
                 location=item.get(field_map.get("location", "jobGeo"), "Remote"),
                 salary_min=int(salary_min) if salary_min else None,
                 salary_max=int(salary_max) if salary_max else None,
