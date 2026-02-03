@@ -435,14 +435,14 @@
 
     /* ── Job Listings ─────────────────────────────────── */
     .table-section { margin-bottom: 1.5rem; }
-    .jobs-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .jobs-list { display: flex; flex-direction: column; gap: 0.4rem; }
 
     .job-card {
       display: grid;
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: minmax(200px, 2fr) minmax(120px, 1fr) minmax(100px, 1fr) minmax(100px, 140px) 80px 36px;
       gap: 1rem;
       align-items: center;
-      padding: 1rem 1.25rem;
+      padding: 0.9rem 1.25rem;
       background: var(--bg-elevated);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-sm);
@@ -453,69 +453,65 @@
     .job-card:hover {
       background: var(--bg-hover);
       border-color: var(--border);
-      transform: translateX(4px);
     }
     .job-card:hover .job-arrow { opacity: 1; color: var(--accent); }
 
-    .job-main { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+    .job-main { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
     .job-title {
-      font-size: 0.95rem;
+      font-size: 0.88rem;
       font-weight: 600;
       color: var(--text-primary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .job-meta {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-    }
     .job-company {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      font-size: 0.82rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-    }
-    .job-company svg { width: 14px; height: 14px; opacity: 0.6; }
-    .job-location {
-      display: inline-flex;
+      display: flex;
       align-items: center;
       gap: 0.3rem;
       font-size: 0.78rem;
-      color: var(--text-tertiary);
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .job-location svg { width: 12px; height: 12px; opacity: 0.5; }
-    .job-tags { display: flex; gap: 0.3rem; margin-top: 0.25rem; }
+    .job-company svg { width: 12px; height: 12px; opacity: 0.5; flex-shrink: 0; }
 
-    .job-salary-col {
+    .job-location {
       display: flex;
-      flex-direction: column;
-      align-items: flex-end;
+      align-items: center;
       gap: 0.3rem;
-      min-width: 100px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
+    .job-location svg { width: 13px; height: 13px; opacity: 0.5; flex-shrink: 0; }
+
+    .job-tags { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+
     .job-salary {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: 700;
       color: var(--green);
       white-space: nowrap;
+      text-align: right;
     }
     .job-salary.none {
       font-size: 0.78rem;
       font-weight: 400;
       color: var(--text-tertiary);
     }
+
     .job-source {
-      padding: 0.2rem 0.5rem;
+      padding: 0.25rem 0.6rem;
       border-radius: 4px;
-      font-size: 0.65rem;
+      font-size: 0.68rem;
       font-weight: 600;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      text-align: center;
+      white-space: nowrap;
     }
     .job-source.remoteok { background: var(--green-glow); color: var(--green); }
     .job-source.arbeitnow { background: var(--accent-glow); color: #a5b4fc; }
@@ -525,21 +521,21 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       color: var(--text-tertiary);
-      opacity: 0.4;
+      opacity: 0.3;
       transition: all 0.15s;
     }
-    .job-arrow svg { width: 18px; height: 18px; }
+    .job-arrow svg { width: 16px; height: 16px; }
 
     .tag {
       display: inline-block;
-      padding: 0.15rem 0.5rem;
+      padding: 0.15rem 0.45rem;
       background: rgba(99,102,241,0.08);
       color: #a5b4fc;
       border-radius: 4px;
-      font-size: 0.68rem;
+      font-size: 0.65rem;
       font-weight: 500;
     }
 
@@ -550,10 +546,30 @@
       font-size: 0.9rem;
     }
 
-    @media (max-width: 700px) {
-      .job-card { grid-template-columns: 1fr auto; gap: 0.75rem; }
-      .job-salary-col { min-width: auto; }
-      .job-arrow { display: none; }
+    /* Header row for job listings */
+    .jobs-header {
+      display: grid;
+      grid-template-columns: minmax(200px, 2fr) minmax(120px, 1fr) minmax(100px, 1fr) minmax(100px, 140px) 80px 36px;
+      gap: 1rem;
+      padding: 0.6rem 1.25rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 0.25rem;
+    }
+    .jobs-header span:nth-child(4),
+    .jobs-header span:nth-child(5) { text-align: right; }
+
+    @media (max-width: 900px) {
+      .job-card { grid-template-columns: 1fr auto auto; }
+      .job-location, .job-tags, .jobs-header { display: none; }
+    }
+    @media (max-width: 600px) {
+      .job-card { grid-template-columns: 1fr auto; padding: 0.85rem 1rem; }
+      .job-source, .job-arrow { display: none; }
     }
 
     .pagination {
@@ -792,6 +808,14 @@
       <span class="card-title">Job Listings</span>
       <span class="card-badge" id="results-count">—</span>
     </div>
+    <div class="jobs-header">
+      <span>Position</span>
+      <span>Location</span>
+      <span>Skills</span>
+      <span>Salary</span>
+      <span>Source</span>
+      <span></span>
+    </div>
     <div class="jobs-list" id="jobs-list">
       <div class="no-results"><span class="spinner"></span> Loading listings...</div>
     </div>
@@ -927,30 +951,26 @@
       const company = esc(titleCase(decodeHtml(j.company)));
       const loc = esc(titleCase(decodeHtml(j.location) || 'Remote'));
       const hasSalary = j.salary_min || j.salary_max;
-      const tags = (j.tags || []).slice(0, 3).map(t => `<span class="tag">${esc(fmtTag(t))}</span>`).join('');
+      const tags = (j.tags || []).slice(0, 2).map(t => `<span class="tag">${esc(fmtTag(t))}</span>`).join('');
       const url = j.url || '#';
 
       return `<a href="${url}" target="_blank" rel="noopener" class="job-card">
         <div class="job-main">
           <div class="job-title">${title}</div>
-          <div class="job-meta">
-            <span class="job-company">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16"/></svg>
-              ${company}
-            </span>
-            <span class="job-location">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              ${loc}
-            </span>
-          </div>
-          ${tags ? `<div class="job-tags">${tags}</div>` : ''}
+          <span class="job-company">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16"/></svg>
+            ${company}
+          </span>
         </div>
-        <div class="job-salary-col">
-          <span class="job-salary${hasSalary ? '' : ' none'}">${sal}</span>
-          <span class="job-source ${j.source}">${fmtSource(j.source)}</span>
-        </div>
+        <span class="job-location">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          ${loc}
+        </span>
+        <div class="job-tags">${tags || '<span class="tag" style="opacity:0.3">—</span>'}</div>
+        <span class="job-salary${hasSalary ? '' : ' none'}">${sal}</span>
+        <span class="job-source ${j.source}">${fmtSource(j.source)}</span>
         <div class="job-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </div>
       </a>`;
     }).join('');
