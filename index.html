@@ -640,6 +640,22 @@
     .jobs-header span:nth-child(4),
     .jobs-header span:nth-child(5) { text-align: right; }
 
+    .col-filter {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      padding: 0.2rem 0.4rem;
+      margin: -0.2rem -0.4rem;
+      border-radius: 4px;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .col-filter:hover { background: var(--bg-hover); color: var(--text-secondary); }
+    .col-filter.active { background: var(--accent-glow); color: #a5b4fc; }
+    .col-filter svg { width: 12px; height: 12px; opacity: 0.6; }
+    .col-filter.active svg { opacity: 1; }
+
     @media (max-width: 900px) {
       .job-card { grid-template-columns: 1fr auto auto; }
       .job-location, .job-tags, .jobs-header { display: none; }
@@ -890,11 +906,6 @@
           <label class="chip"><input type="checkbox" value="hybrid">Hybrid</label>
           <label class="chip"><input type="checkbox" value="onsite">On-site</label>
         </div>
-        <span class="filter-box-label" style="margin-top:0.75rem">Salary Info</span>
-        <div class="checkbox-group" id="salary-chips">
-          <label class="chip"><input type="checkbox" value="has">Has Salary</label>
-          <label class="chip"><input type="checkbox" value="none">No Salary</label>
-        </div>
       </div>
     </div>
   </section>
@@ -909,7 +920,12 @@
       <span>Position</span>
       <span>Location</span>
       <span>Skills</span>
-      <span>Salary</span>
+      <span>
+        <span class="col-filter" id="salary-filter" title="Click to filter by salary">
+          Salary
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4-4m-4 4V4"/></svg>
+        </span>
+      </span>
       <span>Source</span>
       <span></span>
     </div>
@@ -951,6 +967,7 @@
   let salaryChart, historyChart, doughnutChart;
   let allLocations = [];
   let allRoles = [];
+  let salaryFilter = 'all'; // 'all', 'has', 'none'
 
   // ── Decode HTML entities ─────────────────────
   function decodeHtml(s) {
@@ -1063,6 +1080,31 @@
     document.getElementById('filter-salary').value = '';
     document.getElementById('filter-source').value = '';
     document.querySelectorAll('.chip').forEach(c => { c.classList.remove('active'); c.querySelector('input').checked = false; });
+    salaryFilter = 'all';
+    document.getElementById('salary-filter').classList.remove('active');
+    document.getElementById('salary-filter').title = 'Click to show only jobs with salary';
+    page = 1;
+    loadJobs();
+  });
+
+  // Salary column filter (cycles: all -> has -> none -> all)
+  document.getElementById('salary-filter').addEventListener('click', () => {
+    const el = document.getElementById('salary-filter');
+    if (salaryFilter === 'all') {
+      salaryFilter = 'has';
+      el.classList.add('active');
+      el.innerHTML = 'With Salary <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+      el.title = 'Showing jobs with salary. Click to show jobs without salary.';
+    } else if (salaryFilter === 'has') {
+      salaryFilter = 'none';
+      el.innerHTML = 'No Salary <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+      el.title = 'Showing jobs without salary. Click to show all jobs.';
+    } else {
+      salaryFilter = 'all';
+      el.classList.remove('active');
+      el.innerHTML = 'Salary <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4-4m-4 4V4"/></svg>';
+      el.title = 'Click to show only jobs with salary';
+    }
     page = 1;
     loadJobs();
   });
@@ -1086,7 +1128,6 @@
     const seniority = getSelectedChips('seniority-chips');
     const roleTypes = getSelectedChips('role-chips');
     const workTypes = getSelectedChips('worktype-chips');
-    const salaryInfo = getSelectedChips('salary-chips');
 
     let f = 'is_active=eq.true&order=last_seen.desc';
     if (src) f += `&source=eq.${src}`;
@@ -1124,13 +1165,11 @@
       if (wtConds.length) f += `&or=(${wtConds.join(',')})`;
     }
 
-    // Salary info filter
-    if (salaryInfo.length === 1) {
-      if (salaryInfo[0] === 'has') {
-        f += '&or=(salary_min.not.is.null,salary_max.not.is.null)';
-      } else if (salaryInfo[0] === 'none') {
-        f += '&salary_min=is.null&salary_max=is.null';
-      }
+    // Salary info filter (from column header)
+    if (salaryFilter === 'has') {
+      f += '&or=(salary_min.not.is.null,salary_max.not.is.null)';
+    } else if (salaryFilter === 'none') {
+      f += '&salary_min=is.null&salary_max=is.null';
     }
 
     const off = (page - 1) * PAGE_SIZE;
