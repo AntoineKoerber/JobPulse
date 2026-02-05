@@ -486,7 +486,7 @@
 
     .job-card {
       display: grid;
-      grid-template-columns: minmax(200px, 2fr) minmax(120px, 1fr) minmax(100px, 1fr) minmax(100px, 140px) 80px 36px;
+      grid-template-columns: 28px minmax(200px, 2fr) minmax(120px, 1fr) minmax(100px, 1fr) minmax(100px, 140px) 80px 36px;
       gap: 1rem;
       align-items: center;
       padding: 0.9rem 1.25rem;
@@ -626,7 +626,7 @@
     /* Header row for job listings */
     .jobs-header {
       display: grid;
-      grid-template-columns: minmax(200px, 2fr) minmax(120px, 1fr) minmax(100px, 1fr) minmax(100px, 140px) 80px 36px;
+      grid-template-columns: 28px minmax(200px, 2fr) minmax(120px, 1fr) minmax(100px, 1fr) minmax(100px, 140px) 80px 36px;
       gap: 1rem;
       padding: 0.6rem 1.25rem;
       font-size: 0.7rem;
@@ -637,8 +637,8 @@
       border-bottom: 1px solid var(--border-subtle);
       margin-bottom: 0.25rem;
     }
-    .jobs-header span:nth-child(4),
-    .jobs-header span:nth-child(5) { text-align: right; }
+    .jobs-header span:nth-child(5),
+    .jobs-header span:nth-child(6) { text-align: right; }
 
     .col-filter {
       display: inline-flex;
@@ -657,11 +657,11 @@
     .col-filter.active svg { opacity: 1; }
 
     @media (max-width: 900px) {
-      .job-card { grid-template-columns: 1fr auto auto; }
+      .job-card { grid-template-columns: 28px 1fr auto auto; }
       .job-location, .job-tags, .jobs-header { display: none; }
     }
     @media (max-width: 600px) {
-      .job-card { grid-template-columns: 1fr auto; padding: 0.85rem 1rem; }
+      .job-card { grid-template-columns: 28px 1fr auto; padding: 0.85rem 1rem; }
       .job-source, .job-arrow { display: none; }
     }
 
@@ -723,6 +723,72 @@
     .fade-in:nth-child(2) { animation-delay: 0.06s; }
     .fade-in:nth-child(3) { animation-delay: 0.12s; }
     .fade-in:nth-child(4) { animation-delay: 0.18s; }
+
+    /* ── Listing Tabs ─────────────────────────────── */
+    .listing-tabs {
+      display: flex;
+      gap: 0;
+    }
+    .listing-tab {
+      padding: 0.4rem 1rem;
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s;
+    }
+    .listing-tab:hover { color: var(--text-secondary); }
+    .listing-tab.active {
+      color: var(--accent);
+    }
+    .listing-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0.5rem;
+      right: 0.5rem;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 1px;
+    }
+    .listing-tab .saved-count {
+      font-size: 0.75rem;
+      color: inherit;
+      opacity: 0.7;
+    }
+
+    /* ── Bookmark Button ─────────────────────────── */
+    .bookmark-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-tertiary);
+      opacity: 0.4;
+      transition: all 0.15s;
+      padding: 0;
+      flex-shrink: 0;
+    }
+    .bookmark-btn:hover { opacity: 0.8; color: var(--accent); }
+    .bookmark-btn.saved { opacity: 1; color: var(--accent); }
+    .bookmark-btn.saved svg { fill: var(--accent); }
+    .bookmark-btn svg { width: 16px; height: 16px; }
+    @keyframes bookmark-pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+    .bookmark-btn.pulse-anim {
+      animation: bookmark-pulse 0.3s ease;
+    }
 
     /* ── Responsive ────────────────────────────────── */
     @media (max-width: 900px) {
@@ -913,10 +979,14 @@
   <!-- ── Job Listings ─────────────────────────────── -->
   <section class="card table-section">
     <div class="card-header">
-      <span class="card-title">Job Listings</span>
+      <div class="listing-tabs">
+        <button class="listing-tab active" id="tab-all">All Jobs</button>
+        <button class="listing-tab" id="tab-saved">Saved <span class="saved-count">(0)</span></button>
+      </div>
       <span class="card-badge" id="results-count">—</span>
     </div>
     <div class="jobs-header">
+      <span></span>
       <span>Position</span>
       <span>Location</span>
       <span>Skills</span>
@@ -968,6 +1038,26 @@
   let allLocations = [];
   let allRoles = [];
   let salaryFilter = 'all'; // 'all', 'has', 'none'
+  let viewMode = 'all'; // 'all' | 'saved'
+
+  // ── Saved / Bookmark helpers ──────────────────
+  const SAVED_KEY = 'jobpulse_saved';
+  let savedIds = new Set(JSON.parse(localStorage.getItem(SAVED_KEY) || '[]'));
+
+  function persistSaved() {
+    localStorage.setItem(SAVED_KEY, JSON.stringify([...savedIds]));
+  }
+  function isSaved(id) { return savedIds.has(id); }
+  function toggleSaved(id) {
+    if (savedIds.has(id)) savedIds.delete(id);
+    else savedIds.add(id);
+    persistSaved();
+    updateSavedCount();
+  }
+  function updateSavedCount() {
+    const el = document.querySelector('#tab-saved .saved-count');
+    if (el) el.textContent = `(${savedIds.size})`;
+  }
 
   // ── Decode HTML entities ─────────────────────
   function decodeHtml(s) {
@@ -1087,6 +1177,42 @@
     loadJobs();
   });
 
+  // ── Tab click handlers ──────────────────────
+  document.getElementById('tab-all').addEventListener('click', () => {
+    viewMode = 'all';
+    document.getElementById('tab-all').classList.add('active');
+    document.getElementById('tab-saved').classList.remove('active');
+    page = 1;
+    loadJobs();
+  });
+  document.getElementById('tab-saved').addEventListener('click', () => {
+    viewMode = 'saved';
+    document.getElementById('tab-saved').classList.add('active');
+    document.getElementById('tab-all').classList.remove('active');
+    page = 1;
+    loadJobs();
+  });
+
+  // ── Bookmark click delegation ─────────────────
+  document.getElementById('jobs-list').addEventListener('click', (e) => {
+    const btn = e.target.closest('.bookmark-btn');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = Number(btn.dataset.id);
+    toggleSaved(id);
+    btn.classList.toggle('saved');
+    btn.title = isSaved(id) ? 'Remove from saved' : 'Save this job';
+    // Pulse animation
+    btn.classList.remove('pulse-anim');
+    void btn.offsetWidth; // reflow to restart animation
+    btn.classList.add('pulse-anim');
+    // If in saved view and we just unsaved, reload to remove from list
+    if (viewMode === 'saved' && !isSaved(id)) {
+      loadJobs();
+    }
+  });
+
   // Salary column filter (cycles: all -> has -> none -> all)
   document.getElementById('salary-filter').addEventListener('click', () => {
     const el = document.getElementById('salary-filter');
@@ -1129,7 +1255,18 @@
     const roleTypes = getSelectedChips('role-chips');
     const workTypes = getSelectedChips('worktype-chips');
 
+    // Saved view: short-circuit if nothing saved
+    if (viewMode === 'saved' && savedIds.size === 0) {
+      document.getElementById('jobs-list').innerHTML = '<div class="no-results">No saved jobs yet — click the bookmark icon to save listings</div>';
+      updatePag(0, 1);
+      document.getElementById('results-count').textContent = '0 results';
+      return;
+    }
+
     let f = 'is_active=eq.true&order=last_seen.desc';
+    if (viewMode === 'saved') {
+      f += `&id=in.(${[...savedIds].join(',')})`;
+    }
     if (src) f += `&source=eq.${src}`;
     if (loc) f += `&location=ilike.*${encodeURIComponent(loc)}*`;
     if (role) f += `&or=(title.ilike.*${encodeURIComponent(role)}*,tags.cs.["${role}"])`;
@@ -1182,8 +1319,10 @@
       const total = parseInt(res.headers.get('content-range')?.split('/')[1] || '0');
       renderTable(data);
       updatePag(total, page);
-      document.querySelector('#stat-total .stat-value').textContent = total.toLocaleString();
-      document.getElementById('hw-total').textContent = total.toLocaleString();
+      if (viewMode === 'all') {
+        document.querySelector('#stat-total .stat-value').textContent = total.toLocaleString();
+        document.getElementById('hw-total').textContent = total.toLocaleString();
+      }
       document.getElementById('results-count').textContent = `${total.toLocaleString()} results`;
     } catch (e) { console.error(e); }
   }
@@ -1205,7 +1344,11 @@
       const url = j.url || '#';
       const workType = getWorkType(rawLoc, j.source, j.tags);
 
+      const saved = isSaved(j.id);
       return `<a href="${url}" target="_blank" rel="noopener" class="job-card">
+        <button class="bookmark-btn${saved ? ' saved' : ''}" data-id="${j.id}" title="${saved ? 'Remove from saved' : 'Save this job'}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+        </button>
         <div class="job-main">
           <div class="job-title">${title}</div>
           <span class="job-company">
@@ -1438,6 +1581,7 @@
   }
 
   // ── Init ──────────────────────────────────────
+  updateSavedCount();
   loadJobs();
   loadInsights();
   loadSuggestions().then(() => {
