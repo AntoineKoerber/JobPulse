@@ -116,7 +116,7 @@
 
     /* ── Search Hero ─────────────────────────────── */
     .hero {
-      padding: 3rem 2rem 2.5rem;
+      padding: 2rem 2rem 1.75rem;
       background: var(--bg-surface);
       border-bottom: 1px solid var(--border);
       text-align: center;
@@ -125,18 +125,43 @@
       max-width: 700px;
       margin: 0 auto;
     }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+    .hero-eyebrow .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
     .hero h1 {
-      font-size: 2.5rem;
+      font-size: 2rem;
       font-weight: 800;
       letter-spacing: -0.03em;
       line-height: 1.1;
-      margin-bottom: 0.75rem;
+      margin-bottom: 1rem;
       color: var(--text-primary);
     }
-    .hero-sub {
-      font-size: 1.05rem;
-      color: var(--text-secondary);
-      margin-bottom: 1.5rem;
+    .hero-browse {
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      color: var(--text-tertiary);
+    }
+    .hero-browse a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .hero-browse a:hover {
+      text-decoration: underline;
     }
 
     /* Hero Search Bar */
@@ -175,34 +200,10 @@
       flex-shrink: 0;
     }
 
-    .hero-stats {
-      display: flex;
-      justify-content: center;
-      gap: 1.5rem;
-      font-size: 0.85rem;
-      color: var(--text-tertiary);
-    }
-    .hero-stats span {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-    .hero-stats .value {
-      font-weight: 700;
-      color: var(--text-secondary);
-    }
-    .hero-stats .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--green);
-    }
-
     @media (max-width: 600px) {
-      .hero h1 { font-size: 1.8rem; }
+      .hero h1 { font-size: 1.6rem; }
       .hero-search { flex-direction: column; }
       .hero-search .btn-accent { width: 100%; }
-      .hero-stats { flex-direction: column; gap: 0.5rem; }
     }
 
     /* ── Main Layout (Two-Column) ──────────────────── */
@@ -844,23 +845,20 @@
 <!-- ── Search Hero ──────────────────────────────────── -->
 <section class="hero">
   <div class="hero-inner">
-    <h1>Find your next tech job</h1>
-    <p class="hero-sub">Search thousands of remote and on-site positions from top job boards</p>
+    <p class="hero-eyebrow"><span class="dot"></span> <span id="hero-total">—</span> jobs from 3 sources</p>
+    <h1>Tech jobs, all in one place</h1>
     <div class="hero-search">
       <div class="autocomplete-wrap">
-        <input class="filter-input" type="text" id="filter-role" placeholder="Job title or keyword..." autocomplete="off" />
+        <input class="filter-input" type="text" id="filter-role" placeholder="Filter by title or keyword..." autocomplete="off" />
         <div class="autocomplete-list" id="role-suggestions"></div>
       </div>
       <div class="autocomplete-wrap">
-        <input class="filter-input" type="text" id="filter-location" placeholder="City or country..." autocomplete="off" />
+        <input class="filter-input" type="text" id="filter-location" placeholder="Filter by location..." autocomplete="off" />
         <div class="autocomplete-list" id="location-suggestions"></div>
       </div>
-      <button id="filter-btn" class="btn btn-accent">Search</button>
+      <button id="filter-btn" class="btn btn-accent">Filter</button>
     </div>
-    <div class="hero-stats">
-      <span><span class="dot"></span> <span class="value" id="hero-total">—</span> jobs available</span>
-      <span>from <span class="value">3</span> sources</span>
-    </div>
+    <p class="hero-browse">or <a href="#listings" id="browse-link">browse all listings</a> below</p>
   </div>
 </section>
 
@@ -931,7 +929,7 @@
   </aside>
 
   <!-- ── Job Listings ─────────────────────────────── -->
-  <main class="listings-main">
+  <main class="listings-main" id="listings">
     <section class="card table-section">
       <div class="card-header">
         <div class="listing-tabs">
@@ -1250,6 +1248,12 @@
     document.getElementById('tab-all').classList.remove('active');
     page = 1;
     loadJobs();
+  });
+
+  // ── Browse link smooth scroll ────────────────────
+  document.getElementById('browse-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('listings').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
   // ── Navigation handlers ────────────────────────
