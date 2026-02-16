@@ -45,6 +45,75 @@
       -webkit-font-smoothing: antialiased;
     }
 
+    /* ── Navbar ─────────────────────────────────── */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 56px;
+      background: rgba(17, 17, 20, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+    .navbar-brand svg {
+      width: 24px;
+      height: 24px;
+      color: var(--accent);
+    }
+    .navbar-nav {
+      display: flex;
+      gap: 0.25rem;
+    }
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1rem;
+      background: none;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .nav-link:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+    .nav-link.active {
+      background: var(--accent-glow);
+      color: #a5b4fc;
+    }
+    .nav-link svg {
+      width: 16px;
+      height: 16px;
+    }
+    @media (max-width: 500px) {
+      .navbar { padding: 0 1rem; }
+      .nav-link span { display: none; }
+      .nav-link { padding: 0.5rem 0.75rem; }
+    }
+
+    /* ── View Toggle ─────────────────────────────── */
+    .view { display: none; }
+    .view.active { display: block; }
+
     /* ── Search Hero ─────────────────────────────── */
     .hero {
       padding: 3rem 2rem 2.5rem;
@@ -149,9 +218,9 @@
     /* ── Filters Sidebar ───────────────────────────── */
     .filters-sidebar {
       position: sticky;
-      top: 1.5rem;
+      top: calc(56px + 1.5rem);
       height: fit-content;
-      max-height: calc(100vh - 3rem);
+      max-height: calc(100vh - 56px - 3rem);
       overflow-y: auto;
       display: flex;
       flex-direction: column;
@@ -563,47 +632,24 @@
     .btn-sm { padding: 0.4rem 1rem; font-size: 0.8rem; border-radius: 8px; }
     .btn-sm:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
 
-    /* ── Analytics Section (Collapsible) ────────────── */
-    .analytics-section {
+    /* ── Analytics View ────────────────────────────── */
+    .analytics-view {
       max-width: 1400px;
       margin: 0 auto;
-      padding: 0 1.5rem 1.5rem;
+      padding: 1.5rem;
     }
-    .analytics-toggle {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      width: 100%;
-      padding: 1rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.15s;
+    .analytics-header {
+      margin-bottom: 1.5rem;
     }
-    .analytics-toggle:hover {
-      background: var(--bg-elevated);
+    .analytics-header h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
       color: var(--text-primary);
+      margin-bottom: 0.25rem;
     }
-    .analytics-toggle svg {
-      width: 16px;
-      height: 16px;
-      transition: transform 0.2s;
-    }
-    .analytics-section.expanded .analytics-toggle svg {
-      transform: rotate(180deg);
-    }
-    .analytics-content {
-      display: none;
-      margin-top: 1rem;
-    }
-    .analytics-section.expanded .analytics-content {
-      display: block;
+    .analytics-header p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
     }
 
     /* ── Insight Grid ──────────────────────────────── */
@@ -774,6 +820,27 @@
 </head>
 <body>
 
+<!-- ── Navbar ───────────────────────────────────────── -->
+<nav class="navbar">
+  <a href="#" class="navbar-brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    JobPulse
+  </a>
+  <div class="navbar-nav">
+    <button class="nav-link active" id="nav-jobs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+      <span>Jobs</span>
+    </button>
+    <button class="nav-link" id="nav-analytics">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Analytics</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ── Jobs View ────────────────────────────────────── -->
+<div class="view active" id="jobs-view">
+
 <!-- ── Search Hero ──────────────────────────────────── -->
 <section class="hero">
   <div class="hero-inner">
@@ -900,13 +967,15 @@
 
 </div>
 
-<!-- ── Analytics Section (Collapsible) ──────────────── -->
-<section class="analytics-section" id="analytics-section">
-  <button class="analytics-toggle" id="analytics-toggle">
-    View Market Analytics
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
-  </button>
-  <div class="analytics-content">
+</div><!-- /jobs-view -->
+
+<!-- ── Analytics View ───────────────────────────────── -->
+<div class="view" id="analytics-view">
+  <div class="analytics-view">
+    <div class="analytics-header">
+      <h2>Market Analytics</h2>
+      <p>Insights from aggregated job listings across all sources</p>
+    </div>
     <!-- Insight Row: Sources Doughnut + Top Tags + Top Companies -->
     <section class="insight-grid">
       <div class="card fade-in">
@@ -952,7 +1021,7 @@
       </div>
     </section>
   </div>
-</section>
+</div><!-- /analytics-view -->
 
 <footer>
   <p>JobPulse &mdash; Resilient data pipeline demo &mdash; <a href="https://github.com/AntoineKoerber/JobPulse">View Source &amp; Architecture</a></p>
@@ -1183,12 +1252,21 @@
     loadJobs();
   });
 
-  // ── Analytics toggle ────────────────────────
-  document.getElementById('analytics-toggle').addEventListener('click', () => {
-    const section = document.getElementById('analytics-section');
-    section.classList.toggle('expanded');
-    // Lazy load analytics on first expand
-    if (section.classList.contains('expanded') && !analyticsLoaded) {
+  // ── Navigation handlers ────────────────────────
+  document.getElementById('nav-jobs').addEventListener('click', () => {
+    document.getElementById('nav-jobs').classList.add('active');
+    document.getElementById('nav-analytics').classList.remove('active');
+    document.getElementById('jobs-view').classList.add('active');
+    document.getElementById('analytics-view').classList.remove('active');
+  });
+
+  document.getElementById('nav-analytics').addEventListener('click', () => {
+    document.getElementById('nav-analytics').classList.add('active');
+    document.getElementById('nav-jobs').classList.remove('active');
+    document.getElementById('analytics-view').classList.add('active');
+    document.getElementById('jobs-view').classList.remove('active');
+    // Lazy load analytics on first view
+    if (!analyticsLoaded) {
       loadInsights();
       analyticsLoaded = true;
     }
