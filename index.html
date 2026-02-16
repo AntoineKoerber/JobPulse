@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -1032,6 +1033,10 @@
 
   const q = (t, p = '') => fetch(`${SB}/rest/v1/${t}?${p}`, { headers: H });
 
+  // ── Supabase Client ─────────────────────────────
+  const supabase = window.supabase.createClient(SB, KEY);
+  let currentUserId = null;
+
   let page = 1;
   const PAGE_SIZE = 50;
   let salaryChart, historyChart, doughnutChart;
@@ -1040,20 +1045,62 @@
   let salaryFilter = 'all'; // 'all', 'has', 'none'
   let viewMode = 'all'; // 'all' | 'saved'
 
-  // ── Saved / Bookmark helpers ──────────────────
-  const SAVED_KEY = 'jobpulse_saved';
-  let savedIds = new Set(JSON.parse(localStorage.getItem(SAVED_KEY) || '[]'));
+  // ── Saved / Bookmark helpers (Supabase) ─────────
+  let savedIds = new Set();
 
-  function persistSaved() {
-    localStorage.setItem(SAVED_KEY, JSON.stringify([...savedIds]));
+  async function initAuth() {
+    // Check for existing session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      currentUserId = session.user.id;
+    } else {
+      // Create anonymous session
+      const { data, error } = await supabase.auth.signInAnonymously();
+      if (error) {
+        console.error('Anonymous auth failed:', error);
+        return;
+      }
+      currentUserId = data.user.id;
+    }
+    await loadSavedIds();
   }
-  function isSaved(id) { return savedIds.has(id); }
-  function toggleSaved(id) {
-    if (savedIds.has(id)) savedIds.delete(id);
-    else savedIds.add(id);
-    persistSaved();
+
+  async function loadSavedIds() {
+    if (!currentUserId) return;
+    const { data, error } = await supabase
+      .from('saved_jobs')
+      .select('job_id')
+      .eq('user_id', currentUserId);
+    if (error) {
+      console.error('Failed to load saved jobs:', error);
+      return;
+    }
+    savedIds = new Set(data.map(r => r.job_id));
     updateSavedCount();
   }
+
+  function isSaved(id) { return savedIds.has(id); }
+
+  async function toggleSaved(id) {
+    if (!currentUserId) return;
+    if (savedIds.has(id)) {
+      // Remove from saved
+      const { error } = await supabase
+        .from('saved_jobs')
+        .delete()
+        .eq('user_id', currentUserId)
+        .eq('job_id', id);
+      if (!error) savedIds.delete(id);
+    } else {
+      // Add to saved
+      const { error } = await supabase
+        .from('saved_jobs')
+        .insert({ user_id: currentUserId, job_id: id });
+      if (!error) savedIds.add(id);
+    }
+    updateSavedCount();
+  }
+
   function updateSavedCount() {
     const el = document.querySelector('#tab-saved .saved-count');
     if (el) el.textContent = `(${savedIds.size})`;
@@ -1194,21 +1241,24 @@
   });
 
   // ── Bookmark click delegation ─────────────────
-  document.getElementById('jobs-list').addEventListener('click', (e) => {
+  document.getElementById('jobs-list').addEventListener('click', async (e) => {
     const btn = e.target.closest('.bookmark-btn');
     if (!btn) return;
     e.preventDefault();
     e.stopPropagation();
     const id = Number(btn.dataset.id);
-    toggleSaved(id);
+    const wasSaved = isSaved(id);
+    // Optimistic UI update
     btn.classList.toggle('saved');
-    btn.title = isSaved(id) ? 'Remove from saved' : 'Save this job';
+    btn.title = wasSaved ? 'Save this job' : 'Remove from saved';
     // Pulse animation
     btn.classList.remove('pulse-anim');
     void btn.offsetWidth; // reflow to restart animation
     btn.classList.add('pulse-anim');
+    // Persist to Supabase
+    await toggleSaved(id);
     // If in saved view and we just unsaved, reload to remove from list
-    if (viewMode === 'saved' && !isSaved(id)) {
+    if (viewMode === 'saved' && wasSaved) {
       loadJobs();
     }
   });
@@ -1581,13 +1631,15 @@
   }
 
   // ── Init ──────────────────────────────────────
-  updateSavedCount();
-  loadJobs();
-  loadInsights();
-  loadSuggestions().then(() => {
-    setupAutocomplete('filter-role', 'role-suggestions', () => allRoles);
-    setupAutocomplete('filter-location', 'location-suggestions', () => allLocations);
-  });
+  (async () => {
+    await initAuth();
+    loadJobs();
+    loadInsights();
+    loadSuggestions().then(() => {
+      setupAutocomplete('filter-role', 'role-suggestions', () => allRoles);
+      setupAutocomplete('filter-location', 'location-suggestions', () => allLocations);
+    });
+  })();
 })();
 </script>
 </body>
