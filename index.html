@@ -1228,9 +1228,9 @@
 
   // ── Chip toggle ─────────────────────────────
   document.querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      chip.classList.toggle('active');
-      chip.querySelector('input').checked = chip.classList.contains('active');
+    const input = chip.querySelector('input');
+    input.addEventListener('change', () => {
+      chip.classList.toggle('active', input.checked);
       page = 1;
       loadJobs();
     });
