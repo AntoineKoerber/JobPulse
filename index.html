@@ -69,20 +69,80 @@
       to { opacity: 1; transform: translateX(0); }
     }
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.95); }
     }
     @keyframes shimmer {
       0% { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
     }
     @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-30px); }
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      33% { transform: translateY(-15px) rotate(1deg); }
+      66% { transform: translateY(-8px) rotate(-1deg); }
     }
     @keyframes breathe {
-      0%, 100% { transform: scale(1); opacity: 0.5; }
-      50% { transform: scale(1.05); opacity: 0.8; }
+      0%, 100% { transform: scale(1); opacity: 0.4; }
+      50% { transform: scale(1.1); opacity: 0.7; }
+    }
+    @keyframes gradient-move {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes ripple {
+      0% { transform: scale(1); opacity: 0.4; }
+      100% { transform: scale(2.5); opacity: 0; }
+    }
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(100%); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-3deg); }
+      75% { transform: rotate(3deg); }
+    }
+
+    /* Scroll-triggered animation classes */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.8s var(--ease-smooth);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-left {
+      opacity: 0;
+      transform: translateX(-30px);
+      transition: all 0.8s var(--ease-smooth);
+    }
+    .reveal-left.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .reveal-scale {
+      opacity: 0;
+      transform: scale(0.95);
+      transition: all 0.6s var(--ease-smooth);
+    }
+    .reveal-scale.visible {
+      opacity: 1;
+      transform: scale(1);
     }
 
     /* ── Navbar ─────────────────────────────────── */
@@ -108,7 +168,7 @@
       color: var(--text-primary);
       text-decoration: none;
       letter-spacing: -0.02em;
-      transition: opacity 0.3s var(--ease-smooth);
+      transition: all 0.3s var(--ease-smooth);
     }
     .navbar-brand:hover {
       opacity: 0.7;
@@ -117,6 +177,10 @@
       width: 24px;
       height: 24px;
       color: var(--accent);
+      transition: transform 0.4s var(--ease-bounce);
+    }
+    .navbar-brand:hover svg {
+      transform: rotate(-10deg) scale(1.1);
     }
     .navbar-nav {
       display: flex;
@@ -136,13 +200,18 @@
       color: var(--text-tertiary);
       cursor: pointer;
       transition: all 0.3s var(--ease-smooth);
+      position: relative;
     }
     .nav-link:hover {
       color: var(--text-primary);
     }
+    .nav-link:hover svg {
+      animation: wiggle 0.5s ease;
+    }
     .nav-link.active {
       background: var(--text-primary);
       color: white;
+      animation: scaleIn 0.25s var(--ease-bounce);
     }
     .nav-link svg {
       width: 18px;
@@ -166,20 +235,57 @@
       position: relative;
       overflow: hidden;
     }
-    /* Single subtle gradient orb */
+    /* Animated gradient mesh */
     .hero::before {
       content: '';
       position: absolute;
-      width: 800px;
-      height: 800px;
-      top: -400px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: radial-gradient(circle, rgba(80,70,229,0.06) 0%, transparent 70%);
+      width: 150%;
+      height: 150%;
+      top: -25%;
+      left: -25%;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(80,70,229,0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(5,150,105,0.06) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(217,119,6,0.04) 0%, transparent 60%);
       pointer-events: none;
-      animation: breathe 8s ease-in-out infinite;
+      animation: float 20s ease-in-out infinite;
     }
-    .hero-shapes { display: none; }
+    /* Floating orbs */
+    .hero-shapes {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .hero-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+    }
+    .hero-orb:nth-child(1) {
+      width: 400px;
+      height: 400px;
+      top: -150px;
+      right: 10%;
+      background: rgba(80,70,229,0.12);
+      animation: float 15s ease-in-out infinite;
+    }
+    .hero-orb:nth-child(2) {
+      width: 300px;
+      height: 300px;
+      bottom: -100px;
+      left: 5%;
+      background: rgba(5,150,105,0.1);
+      animation: float 18s ease-in-out infinite reverse;
+    }
+    .hero-orb:nth-child(3) {
+      width: 200px;
+      height: 200px;
+      top: 40%;
+      left: 15%;
+      background: rgba(217,119,6,0.08);
+      animation: breathe 10s ease-in-out infinite;
+    }
     .hero-inner {
       max-width: 600px;
       margin: 0 auto;
@@ -199,10 +305,27 @@
       color: var(--green);
       margin-bottom: 2rem;
       letter-spacing: 0.02em;
+      animation: fadeUp 0.6s var(--ease-smooth);
     }
     .hero-eyebrow .dot {
-      width: 6px;
-      height: 6px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      position: relative;
+    }
+    .hero-eyebrow .dot::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: var(--green);
+      animation: ripple 2s ease-out infinite;
+    }
+    .hero-eyebrow .dot::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
       border-radius: 50%;
       background: var(--green);
       animation: pulse 2s ease-in-out infinite;
@@ -214,11 +337,17 @@
       line-height: 1.1;
       margin-bottom: 2.5rem;
       color: var(--text-primary);
+      animation: fadeUp 0.8s var(--ease-smooth);
+      animation-delay: 0.1s;
+      animation-fill-mode: both;
     }
     .hero-browse {
       margin-top: 2rem;
       font-size: 0.875rem;
       color: var(--text-tertiary);
+      animation: fadeUp 0.8s var(--ease-smooth);
+      animation-delay: 0.3s;
+      animation-fill-mode: both;
     }
     .hero-browse a {
       color: var(--text-secondary);
@@ -241,10 +370,18 @@
       border-radius: 100px;
       padding: 0.5rem;
       transition: all 0.4s var(--ease-smooth);
+      animation: fadeUp 0.8s var(--ease-smooth);
+      animation-delay: 0.2s;
+      animation-fill-mode: both;
+    }
+    .hero-search:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
     }
     .hero-search:focus-within {
       background: var(--bg-hover);
       box-shadow: var(--shadow);
+      transform: translateY(-2px);
     }
     .hero-search .autocomplete-wrap {
       flex: 1;
@@ -333,20 +470,39 @@
       cursor: pointer;
       transition: all 0.3s var(--ease-smooth);
       user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .chip::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(0,0,0,0.1) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s;
     }
     .chip:hover {
       background: var(--bg-hover);
       color: var(--text-primary);
+      transform: translateY(-1px);
+    }
+    .chip:active {
+      transform: scale(0.95);
+    }
+    .chip:active::after {
+      opacity: 1;
     }
     label.chip.active,
     .chip.active {
       background: var(--text-primary) !important;
       color: #ffffff !important;
       font-weight: 500;
+      animation: scaleIn 0.2s var(--ease-bounce);
     }
     label.chip.active:hover,
     .chip.active:hover {
       opacity: 0.85;
+      transform: translateY(-1px);
     }
     .chip input { display: none; }
 
@@ -455,6 +611,21 @@
       border-radius: 100px;
       color: var(--text-tertiary);
     }
+    .card-badge.live-badge {
+      background: var(--green-glow);
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .card-badge.live-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
 
     /* ── Job Listings ─────────────────────────────────── */
     .table-section { margin-bottom: 1.5rem; }
@@ -471,10 +642,11 @@
       border-bottom: 1px solid var(--border-subtle);
       border-radius: 0;
       cursor: pointer;
-      transition: all 0.3s var(--ease-smooth);
+      transition: all 0.4s var(--ease-smooth);
       text-decoration: none;
       opacity: 0;
       animation: fadeUp 0.5s var(--ease-smooth) forwards;
+      position: relative;
     }
     .job-card:last-child {
       border-bottom: none;
@@ -485,6 +657,16 @@
       padding: 1.25rem 1.5rem;
       border-radius: var(--radius);
       border-color: transparent;
+      transform: scale(1.01);
+    }
+    .job-card:hover .job-title {
+      color: var(--accent);
+    }
+    .job-card:hover .job-arrow {
+      transform: translateX(4px);
+    }
+    .job-card:active {
+      transform: scale(0.99);
     }
     .job-card:nth-child(1) { animation-delay: 0s; }
     .job-card:nth-child(2) { animation-delay: 0.02s; }
@@ -506,6 +688,7 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      transition: color 0.3s var(--ease-smooth);
     }
     .job-company {
       display: flex;
@@ -602,7 +785,7 @@
       height: 32px;
       color: var(--text-tertiary);
       opacity: 0;
-      transition: all 0.2s;
+      transition: all 0.3s var(--ease-smooth);
     }
     .job-arrow svg { width: 18px; height: 18px; }
 
@@ -744,9 +927,28 @@
     .btn-accent {
       background: var(--text-primary);
       color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-accent::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
     }
     .btn-accent:hover {
-      opacity: 0.85;
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+    .btn-accent:hover::before {
+      width: 300px;
+      height: 300px;
     }
     .btn-ghost {
       background: var(--bg-elevated);
@@ -1027,9 +1229,9 @@
 <!-- ── Search Hero ──────────────────────────────────── -->
 <section class="hero">
   <div class="hero-shapes">
-    <div class="hero-shape"></div>
-    <div class="hero-shape"></div>
-    <div class="hero-shape"></div>
+    <div class="hero-orb"></div>
+    <div class="hero-orb"></div>
+    <div class="hero-orb"></div>
   </div>
   <div class="hero-inner">
     <p class="hero-eyebrow"><span class="dot"></span> <span id="hero-total">—</span> jobs from 3 sources</p>
@@ -1169,23 +1371,23 @@
     </div>
     <!-- Insight Row: Sources Doughnut + Top Tags + Top Companies -->
     <section class="insight-grid">
-      <div class="card fade-in">
+      <div class="card reveal-scale" style="transition-delay: 0s;">
         <div class="card-header">
           <span class="card-title">Sources Breakdown</span>
-          <span class="card-badge">Live</span>
+          <span class="card-badge live-badge">Live</span>
         </div>
         <div class="doughnut-wrap">
           <canvas id="sources-doughnut"></canvas>
         </div>
       </div>
-      <div class="card fade-in">
+      <div class="card reveal-scale" style="transition-delay: 0.1s;">
         <div class="card-header">
           <span class="card-title">Top Skills</span>
           <span class="card-badge">By frequency</span>
         </div>
         <ul class="insight-list" id="top-tags-list"></ul>
       </div>
-      <div class="card fade-in">
+      <div class="card reveal-scale" style="transition-delay: 0.2s;">
         <div class="card-header">
           <span class="card-title">Top Companies</span>
           <span class="card-badge">Most listings</span>
@@ -1196,14 +1398,14 @@
 
     <!-- Charts -->
     <section class="charts-grid">
-      <div class="card chart-card fade-in">
+      <div class="card chart-card reveal" style="transition-delay: 0.3s;">
         <div class="card-header">
           <span class="card-title">Salary Distribution</span>
           <span class="card-badge">USD equivalent</span>
         </div>
         <canvas id="salary-chart"></canvas>
       </div>
-      <div class="card chart-card fade-in">
+      <div class="card chart-card reveal" style="transition-delay: 0.4s;">
         <div class="card-header">
           <span class="card-title">Scrape History</span>
           <span class="card-badge">Added vs Removed</span>
@@ -1598,9 +1800,13 @@
       const total = parseInt(res.headers.get('content-range')?.split('/')[1] || '0');
       renderTable(data);
       updatePag(total, page);
-      // Update hero stats
+      // Update hero stats with animation
       if (viewMode === 'all' && !role && !loc && !sal && !src && !seniority.length && !roleTypes.length && !workTypes.length && salaryFilter === 'all') {
-        document.getElementById('hero-total').textContent = total.toLocaleString();
+        const heroTotal = document.getElementById('hero-total');
+        const currentVal = parseInt(heroTotal.textContent.replace(/,/g, '')) || 0;
+        if (currentVal !== total && total > 0) {
+          animateCounter(heroTotal, total);
+        }
       }
       document.getElementById('results-count').textContent = `${total.toLocaleString()} results`;
     } catch (e) { console.error(e); }
@@ -1844,6 +2050,104 @@
     });
   }
 
+  // ── Animated Counter ────────────────────────────
+  function animateCounter(element, target, duration = 1500) {
+    const start = 0;
+    const startTime = performance.now();
+    const format = (n) => n.toLocaleString();
+
+    function update(currentTime) {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const current = Math.floor(start + (target - start) * easeOut);
+      element.textContent = format(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      }
+    }
+    requestAnimationFrame(update);
+  }
+
+  // ── Animated Placeholder ───────────────────────
+  function animatePlaceholder(input, placeholders, interval = 3000) {
+    let index = 0;
+    let charIndex = 0;
+    let isDeleting = false;
+    let currentText = '';
+    const typeSpeed = 80;
+    const deleteSpeed = 40;
+    const pauseDuration = 2000;
+
+    function type() {
+      const target = placeholders[index];
+
+      if (!isDeleting) {
+        currentText = target.substring(0, charIndex + 1);
+        charIndex++;
+        input.placeholder = currentText;
+
+        if (charIndex === target.length) {
+          setTimeout(() => { isDeleting = true; type(); }, pauseDuration);
+          return;
+        }
+      } else {
+        currentText = target.substring(0, charIndex - 1);
+        charIndex--;
+        input.placeholder = currentText;
+
+        if (charIndex === 0) {
+          isDeleting = false;
+          index = (index + 1) % placeholders.length;
+        }
+      }
+
+      setTimeout(type, isDeleting ? deleteSpeed : typeSpeed);
+    }
+
+    type();
+  }
+
+  // ── Scroll Reveal ──────────────────────────────
+  function setupScrollReveal() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.reveal, .reveal-left, .reveal-scale').forEach(el => {
+      observer.observe(el);
+    });
+  }
+
+  // ── Magnetic Button Effect ─────────────────────
+  function setupMagneticButtons() {
+    document.querySelectorAll('.btn-accent').forEach(btn => {
+      btn.addEventListener('mousemove', (e) => {
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        btn.style.transform = `translate(${x * 0.15}px, ${y * 0.15}px)`;
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.transform = '';
+      });
+    });
+  }
+
+  // ── Staggered List Animation ───────────────────
+  function animateListItems(container) {
+    const items = container.querySelectorAll('.job-card, .skeleton-card');
+    items.forEach((item, i) => {
+      item.style.animationDelay = `${i * 0.03}s`;
+    });
+  }
+
   // ── Init ──────────────────────────────────────
   (async () => {
     await initAuth();
@@ -1852,6 +2156,23 @@
       setupAutocomplete('filter-role', 'role-suggestions', () => allRoles);
       setupAutocomplete('filter-location', 'location-suggestions', () => allLocations);
     });
+
+    // Start animated placeholder
+    const roleInput = document.getElementById('filter-role');
+    animatePlaceholder(roleInput, [
+      'Software Engineer',
+      'Product Manager',
+      'UX Designer',
+      'Data Scientist',
+      'DevOps Engineer',
+      'Frontend Developer'
+    ]);
+
+    // Setup scroll reveal
+    setupScrollReveal();
+
+    // Setup magnetic buttons
+    setupMagneticButtons();
   })();
 })();
 </script>
