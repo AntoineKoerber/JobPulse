@@ -402,8 +402,38 @@
       animation-delay: 0.15s;
       animation-fill-mode: both;
     }
+    .hero-work-type {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+      animation: fadeUp 0.8s var(--ease-smooth);
+      animation-delay: 0.25s;
+      animation-fill-mode: both;
+    }
+    .work-type-btn {
+      padding: 0.5rem 1rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s var(--ease-smooth);
+    }
+    .work-type-btn:hover {
+      border-color: var(--text-tertiary);
+      color: var(--text-primary);
+    }
+    .work-type-btn.active {
+      background: var(--text-primary);
+      border-color: var(--text-primary);
+      color: white;
+    }
     .hero-browse {
-      margin-top: 2rem;
+      margin-top: 1.5rem;
       font-size: 0.875rem;
       color: var(--text-tertiary);
       animation: fadeUp 0.8s var(--ease-smooth);
@@ -1459,6 +1489,12 @@
       </div>
       <button id="filter-btn" class="btn btn-accent">Filter</button>
     </div>
+    <div class="hero-work-type">
+      <button class="work-type-btn active" data-type="all">All</button>
+      <button class="work-type-btn" data-type="remote">Remote</button>
+      <button class="work-type-btn" data-type="hybrid">Hybrid</button>
+      <button class="work-type-btn" data-type="onsite">On-site</button>
+    </div>
     <p class="hero-browse">or <a href="#listings" id="browse-link">browse all listings</a> below</p>
   </div>
 </section>
@@ -1678,6 +1714,7 @@
   let allRoles = [];
   let salaryFilter = 'all'; // 'all', 'has', 'none'
   let viewMode = 'all'; // 'all' | 'saved'
+  let heroWorkType = 'all'; // 'all', 'remote', 'hybrid', 'onsite'
   let analyticsLoaded = false;
 
   // ── Saved / Bookmark helpers (Supabase) ─────────
@@ -2067,21 +2104,22 @@
       f += `&or=(${roleOr})`;
     }
 
-    // Work type filter
-    if (workTypes.length === 1) {
-      if (workTypes[0] === 'remote') {
+    // Work type filter (from sidebar or hero buttons)
+    const effectiveWorkType = workTypes.length > 0 ? workTypes : (heroWorkType !== 'all' ? [heroWorkType] : []);
+    if (effectiveWorkType.length === 1) {
+      if (effectiveWorkType[0] === 'remote') {
         f += '&or=(source.in.(remoteok,jobicy),location.ilike.*remote*)';
-      } else if (workTypes[0] === 'hybrid') {
+      } else if (effectiveWorkType[0] === 'hybrid') {
         f += '&location=ilike.*hybrid*';
-      } else if (workTypes[0] === 'onsite') {
+      } else if (effectiveWorkType[0] === 'onsite') {
         f += '&source=eq.arbeitnow&not.location=ilike.*remote*';
       }
-    } else if (workTypes.length > 1) {
+    } else if (effectiveWorkType.length > 1) {
       // Multiple work types - build OR conditions
       const wtConds = [];
-      if (workTypes.includes('remote')) wtConds.push('source.in.(remoteok,jobicy)', 'location.ilike.*remote*');
-      if (workTypes.includes('hybrid')) wtConds.push('location.ilike.*hybrid*');
-      if (workTypes.includes('onsite')) wtConds.push('and(source.eq.arbeitnow,not.location.ilike.*remote*)');
+      if (effectiveWorkType.includes('remote')) wtConds.push('source.in.(remoteok,jobicy)', 'location.ilike.*remote*');
+      if (effectiveWorkType.includes('hybrid')) wtConds.push('location.ilike.*hybrid*');
+      if (effectiveWorkType.includes('onsite')) wtConds.push('and(source.eq.arbeitnow,not.location.ilike.*remote*)');
       if (wtConds.length) f += `&or=(${wtConds.join(',')})`;
     }
 
@@ -2500,7 +2538,8 @@
   function hasActiveFilters() {
     const f = getCurrentFilters();
     return f.role || f.location || f.salary || f.source ||
-           f.seniority.length > 0 || f.roleTypes.length > 0 || f.workTypes.length > 0;
+           f.seniority.length > 0 || f.roleTypes.length > 0 || f.workTypes.length > 0 ||
+           (heroWorkType && heroWorkType !== 'all');
   }
 
   function getFilterDescription() {
@@ -2510,7 +2549,12 @@
     if (f.location) parts.push(`in ${f.location}`);
     if (f.seniority?.length) parts.push(f.seniority.join(', '));
     if (f.roleTypes?.length) parts.push(f.roleTypes.join(', '));
-    if (f.workTypes?.length) parts.push(f.workTypes.join(', '));
+    if (f.workTypes?.length) parts.push(f.workTypes.map(w => w === 'remote' ? 'Remote' : w === 'hybrid' ? 'Hybrid' : 'On-site').join(', '));
+    // Include hero work type if not "all"
+    if (heroWorkType && heroWorkType !== 'all') {
+      const label = heroWorkType === 'remote' ? 'Remote' : heroWorkType === 'hybrid' ? 'Hybrid' : 'On-site';
+      if (!parts.some(p => p.includes(label))) parts.push(label);
+    }
     return parts.join(' · ');
   }
 
@@ -2642,6 +2686,18 @@
     });
     document.querySelectorAll('.chip input').forEach(input => {
       input.addEventListener('change', updateAlertBannerVisibility);
+    });
+
+    // Hero work type buttons
+    document.querySelectorAll('.work-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.work-type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        heroWorkType = btn.dataset.type;
+        page = 1;
+        loadJobs();
+        updateAlertBannerVisibility();
+      });
     });
   })();
 })();
