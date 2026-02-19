@@ -1050,29 +1050,32 @@
     .autocomplete-wrap { position: relative; }
     .autocomplete-list {
       position: absolute;
-      top: 100%;
+      top: calc(100% + 4px);
       left: 0;
       right: 0;
-      background: var(--bg-card);
+      background: #ffffff;
       border: 1px solid var(--border);
-      border-top: none;
-      border-radius: 0 0 8px 8px;
-      max-height: 200px;
+      border-radius: var(--radius-sm);
+      max-height: 240px;
       overflow-y: auto;
-      z-index: 100;
+      z-index: 1000;
       display: none;
+      box-shadow: var(--shadow-lg);
     }
-    .autocomplete-list.show { display: block; }
+    .autocomplete-list.show { display: block; animation: fadeUp 0.2s var(--ease-smooth); }
     .autocomplete-item {
-      padding: 0.55rem 0.9rem;
-      font-size: 0.82rem;
-      color: var(--text-secondary);
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      color: var(--text-primary);
       cursor: pointer;
-      transition: background 0.1s;
+      transition: background 0.15s var(--ease-smooth);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .autocomplete-item:last-child {
+      border-bottom: none;
     }
     .autocomplete-item:hover, .autocomplete-item.active {
-      background: var(--bg-hover);
-      color: var(--text-primary);
+      background: var(--bg-elevated);
     }
     .autocomplete-item mark {
       background: transparent;
@@ -1207,7 +1210,7 @@
 
 <!-- ── Navbar ───────────────────────────────────────── -->
 <nav class="navbar">
-  <a href="#" class="navbar-brand">
+  <a href="#" class="navbar-brand" id="brand-home">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
     JobPulse
   </a>
@@ -1242,7 +1245,7 @@
         <div class="autocomplete-list" id="role-suggestions"></div>
       </div>
       <div class="autocomplete-wrap">
-        <input class="filter-input" type="text" id="filter-location" placeholder="Filter by location..." autocomplete="off" />
+        <input class="filter-input" type="text" id="filter-location" placeholder="Location (e.g. Germany, France)" autocomplete="off" />
         <div class="autocomplete-list" id="location-suggestions"></div>
       </div>
       <button id="filter-btn" class="btn btn-accent">Filter</button>
@@ -1525,10 +1528,25 @@
       const res = await q('job_listings', 'is_active=eq.true&select=location,title');
       const data = await res.json();
 
-      // Unique locations
-      const locSet = new Set();
-      data.forEach(d => { if (d.location && d.location.length > 1) locSet.add(d.location); });
-      allLocations = [...locSet].sort();
+      // Unique locations - parse and extract individual places
+      const locCounts = {};
+      data.forEach(d => {
+        if (!d.location || d.location.length < 2) return;
+        // Split by common delimiters to get individual locations
+        const parts = d.location.split(/[,\/;]|\s+or\s+|\s+-\s+/i);
+        parts.forEach(part => {
+          const loc = part.trim();
+          // Filter out generic terms and very short strings
+          if (loc.length > 2 &&
+              !loc.toLowerCase().match(/^(remote|worldwide|anywhere|global|hybrid|on-?site|full-?time|part-?time|n\/a|other)$/i)) {
+            locCounts[loc] = (locCounts[loc] || 0) + 1;
+          }
+        });
+      });
+      // Sort by frequency (most common first) then alphabetically
+      allLocations = Object.entries(locCounts)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([loc]) => loc);
 
       // Common role keywords from titles
       const roleWords = {};
@@ -1545,16 +1563,44 @@
     } catch (e) { console.error('Failed to load suggestions', e); }
   }
 
-  function setupAutocomplete(inputId, listId, getSuggestions) {
+  function setupAutocomplete(inputId, listId, getSuggestions, supportMultiple = false) {
     const input = document.getElementById(inputId);
     const list = document.getElementById(listId);
     let activeIdx = -1;
 
+    // Helper to get current search term (last part after comma if multiple)
+    function getCurrentTerm() {
+      const fullVal = input.value;
+      if (supportMultiple && fullVal.includes(',')) {
+        const parts = fullVal.split(',');
+        return parts[parts.length - 1].trim().toLowerCase();
+      }
+      return fullVal.toLowerCase().trim();
+    }
+
+    // Helper to set value (append or replace)
+    function setValue(selected) {
+      const fullVal = input.value;
+      if (supportMultiple && fullVal.includes(',')) {
+        const parts = fullVal.split(',');
+        parts[parts.length - 1] = ' ' + selected;
+        input.value = parts.join(',');
+      } else {
+        input.value = selected;
+      }
+    }
+
     input.addEventListener('input', () => {
-      const val = input.value.toLowerCase().trim();
+      const val = getCurrentTerm();
       if (val.length < 1) { list.classList.remove('show'); return; }
 
-      const matches = getSuggestions().filter(s => s.toLowerCase().includes(val)).slice(0, 8);
+      // Filter out already-selected items
+      const alreadySelected = supportMultiple ?
+        input.value.split(',').map(p => p.trim().toLowerCase()).filter(p => p) : [];
+
+      const matches = getSuggestions()
+        .filter(s => s.toLowerCase().includes(val) && !alreadySelected.includes(s.toLowerCase()))
+        .slice(0, 8);
       if (!matches.length) { list.classList.remove('show'); return; }
 
       list.innerHTML = matches.map(m => {
@@ -1567,7 +1613,7 @@
 
       list.querySelectorAll('.autocomplete-item').forEach((item, i) => {
         item.addEventListener('click', () => {
-          input.value = matches[i];
+          setValue(matches[i]);
           list.classList.remove('show');
           page = 1;
           loadJobs();
@@ -1589,7 +1635,7 @@
         items.forEach((it, i) => it.classList.toggle('active', i === activeIdx));
       } else if (e.key === 'Enter' && activeIdx >= 0) {
         e.preventDefault();
-        input.value = items[activeIdx].textContent;
+        setValue(items[activeIdx].textContent);
         list.classList.remove('show');
         page = 1;
         loadJobs();
@@ -1616,7 +1662,8 @@
     el.addEventListener('keydown', e => { if (e.key === 'Enter') { page = 1; loadJobs(); } });
   });
   document.getElementById('filter-btn').addEventListener('click', () => { page = 1; loadJobs(); });
-  document.getElementById('clear-btn').addEventListener('click', () => {
+  // Clear all filters
+  function clearAllFilters() {
     document.getElementById('filter-role').value = '';
     document.getElementById('filter-location').value = '';
     document.getElementById('filter-salary').value = '';
@@ -1626,7 +1673,26 @@
     document.getElementById('salary-filter').classList.remove('active');
     document.getElementById('salary-filter').title = 'Click to show only jobs with salary';
     page = 1;
+    viewMode = 'all';
+    document.getElementById('tab-all').classList.add('active');
+    document.getElementById('tab-saved').classList.remove('active');
     loadJobs();
+  }
+
+  document.getElementById('clear-btn').addEventListener('click', clearAllFilters);
+
+  // Logo/brand click - reset to home state
+  document.getElementById('brand-home').addEventListener('click', (e) => {
+    e.preventDefault();
+    // Switch to jobs view if on analytics
+    document.getElementById('nav-jobs').classList.add('active');
+    document.getElementById('nav-analytics').classList.remove('active');
+    document.getElementById('jobs-view').classList.add('active');
+    document.getElementById('analytics-view').classList.remove('active');
+    // Clear all filters
+    clearAllFilters();
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
   // ── Tab click handlers ──────────────────────
@@ -1749,7 +1815,17 @@
       f += `&id=in.(${[...savedIds].join(',')})`;
     }
     if (src) f += `&source=eq.${src}`;
-    if (loc) f += `&location=ilike.*${encodeURIComponent(loc)}*`;
+    // Support multiple locations separated by comma
+    if (loc) {
+      const locations = loc.split(',').map(l => l.trim()).filter(l => l.length > 0);
+      if (locations.length === 1) {
+        f += `&location=ilike.*${encodeURIComponent(locations[0])}*`;
+      } else if (locations.length > 1) {
+        // OR query for multiple locations
+        const locOr = locations.map(l => `location.ilike.*${encodeURIComponent(l)}*`).join(',');
+        f += `&or=(${locOr})`;
+      }
+    }
     if (role) f += `&or=(title.ilike.*${encodeURIComponent(role)}*,tags.cs.["${role}"])`;
     if (sal) f += `&salary_min=gte.${sal}`;
 
@@ -2153,8 +2229,8 @@
     await initAuth();
     loadJobs();
     loadSuggestions().then(() => {
-      setupAutocomplete('filter-role', 'role-suggestions', () => allRoles);
-      setupAutocomplete('filter-location', 'location-suggestions', () => allLocations);
+      setupAutocomplete('filter-role', 'role-suggestions', () => allRoles, false);
+      setupAutocomplete('filter-location', 'location-suggestions', () => allLocations, true);
     });
 
     // Start animated placeholder
