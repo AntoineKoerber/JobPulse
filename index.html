@@ -182,6 +182,28 @@
     .navbar-brand:hover svg {
       transform: rotate(-10deg) scale(1.1);
     }
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .currency-select {
+      padding: 0.5rem 0.75rem;
+      background: var(--bg-elevated);
+      border: none;
+      border-radius: 100px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s var(--ease-smooth);
+      outline: none;
+    }
+    .currency-select:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
     .navbar-nav {
       display: flex;
       gap: 0.25rem;
@@ -1384,15 +1406,23 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
     JobPulse
   </a>
-  <div class="navbar-nav">
-    <button class="nav-link active" id="nav-jobs">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
-      <span>Jobs</span>
-    </button>
-    <button class="nav-link" id="nav-analytics">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      <span>Analytics</span>
-    </button>
+  <div class="navbar-right">
+    <select class="currency-select" id="currency-select">
+      <option value="USD">$ USD</option>
+      <option value="EUR">€ EUR</option>
+      <option value="GBP">£ GBP</option>
+      <option value="CHF">Fr CHF</option>
+    </select>
+    <div class="navbar-nav">
+      <button class="nav-link active" id="nav-jobs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+        <span>Jobs</span>
+      </button>
+      <button class="nav-link" id="nav-analytics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span>Analytics</span>
+      </button>
+    </div>
   </div>
 </nav>
 
@@ -1493,16 +1523,6 @@
         <option value="remoteok">RemoteOK</option>
         <option value="arbeitnow">Arbeitnow</option>
         <option value="jobicy">Jobicy</option>
-      </select>
-    </div>
-
-    <div class="filter-box sidebar-source">
-      <span class="filter-box-label">Display Currency</span>
-      <select class="filter-input" id="currency-select">
-        <option value="USD">USD ($)</option>
-        <option value="EUR">EUR (€)</option>
-        <option value="GBP">GBP (£)</option>
-        <option value="CHF">CHF (Fr)</option>
       </select>
     </div>
 
@@ -2477,22 +2497,36 @@
     };
   }
 
+  function hasActiveFilters() {
+    const f = getCurrentFilters();
+    return f.role || f.location || f.salary || f.source ||
+           f.seniority.length > 0 || f.roleTypes.length > 0 || f.workTypes.length > 0;
+  }
+
   function getFilterDescription() {
     const f = getCurrentFilters();
     const parts = [];
-    if (f.role) parts.push(f.role);
-    if (f.location) parts.push(f.location);
+    if (f.role) parts.push(`"${f.role}"`);
+    if (f.location) parts.push(`in ${f.location}`);
     if (f.seniority?.length) parts.push(f.seniority.join(', '));
     if (f.roleTypes?.length) parts.push(f.roleTypes.join(', '));
     if (f.workTypes?.length) parts.push(f.workTypes.join(', '));
-    return parts.length ? parts.join(' in ') : 'all new jobs';
+    return parts.join(' · ');
   }
 
-  function updateAlertBannerDescription() {
-    const desc = document.querySelector('.alert-banner-desc');
-    if (desc) {
-      const filterDesc = getFilterDescription();
-      desc.textContent = `We'll email you when new jobs match: ${filterDesc}`;
+  function updateAlertBannerVisibility() {
+    const banner = document.getElementById('alert-banner');
+    const dismissed = localStorage.getItem(ALERT_BANNER_KEY) === 'true';
+
+    // Only show banner if filters are active and not dismissed
+    if (hasActiveFilters() && !dismissed && !banner.classList.contains('alert-banner-success')) {
+      banner.classList.remove('hidden');
+      const desc = banner.querySelector('.alert-banner-desc');
+      if (desc) {
+        desc.textContent = `We'll email you when new jobs match: ${getFilterDescription()}`;
+      }
+    } else if (!hasActiveFilters()) {
+      banner.classList.add('hidden');
     }
   }
 
@@ -2543,10 +2577,8 @@
     const createBtn = document.getElementById('create-alert-btn');
     const emailInput = document.getElementById('alert-email');
 
-    // Check if user dismissed the banner
-    if (localStorage.getItem(ALERT_BANNER_KEY) === 'true') {
-      banner.classList.add('hidden');
-    }
+    // Hide by default - only show when filters are active
+    banner.classList.add('hidden');
 
     closeBtn.addEventListener('click', () => {
       banner.classList.add('hidden');
@@ -2563,8 +2595,8 @@
       emailInput.style.borderColor = '';
     });
 
-    // Update description when filters change
-    updateAlertBannerDescription();
+    // Check initial filter state
+    updateAlertBannerVisibility();
   }
 
   // ── Init ──────────────────────────────────────
@@ -2603,13 +2635,13 @@
     // Job alerts banner
     initAlertBanner();
 
-    // Update alert description when filters change
+    // Update alert banner visibility when filters change
     ['filter-role', 'filter-location', 'filter-salary', 'filter-source'].forEach(id => {
-      document.getElementById(id).addEventListener('change', updateAlertBannerDescription);
-      document.getElementById(id).addEventListener('input', updateAlertBannerDescription);
+      document.getElementById(id).addEventListener('change', updateAlertBannerVisibility);
+      document.getElementById(id).addEventListener('input', updateAlertBannerVisibility);
     });
     document.querySelectorAll('.chip input').forEach(input => {
-      input.addEventListener('change', updateAlertBannerDescription);
+      input.addEventListener('change', updateAlertBannerVisibility);
     });
   })();
 })();
