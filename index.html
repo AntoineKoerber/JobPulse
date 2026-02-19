@@ -1868,16 +1868,14 @@
       f += `&id=in.(${[...savedIds].join(',')})`;
     }
     if (src) f += `&source=eq.${src}`;
-    // Support multiple locations separated by comma
-    if (loc) {
-      const locations = loc.split(',').map(l => l.trim()).filter(l => l.length > 0);
-      if (locations.length === 1) {
-        f += `&location=ilike.*${encodeURIComponent(locations[0])}*`;
-      } else if (locations.length > 1) {
-        // OR query for multiple locations
-        const locOr = locations.map(l => `location.ilike.*${encodeURIComponent(l)}*`).join(',');
-        f += `&or=(${locOr})`;
-      }
+    // Parse locations (used for filtering and priority sorting)
+    const locations = loc ? loc.split(',').map(l => l.trim()).filter(l => l.length > 0) : [];
+    if (locations.length === 1) {
+      f += `&location=ilike.*${encodeURIComponent(locations[0])}*`;
+    } else if (locations.length > 1) {
+      // OR query for multiple locations
+      const locOr = locations.map(l => `location.ilike.*${encodeURIComponent(l)}*`).join(',');
+      f += `&or=(${locOr})`;
     }
     if (role) f += `&or=(title.ilike.*${encodeURIComponent(role)}*,tags.cs.["${role}"])`;
     if (sal) f += `&salary_min=gte.${sal}`;
@@ -1925,8 +1923,20 @@
         `${SB}/rest/v1/job_listings?${f}&select=id,external_id,source,title,company,location,salary_min,salary_max,currency,tags,url`,
         { headers: { ...H, 'Prefer': 'count=exact', 'Range': `${off}-${off + PAGE_SIZE - 1}` } }
       );
-      const data = await res.json();
+      let data = await res.json();
       const total = parseInt(res.headers.get('content-range')?.split('/')[1] || '0');
+      // Sort by location priority (first entered location appears first)
+      if (locations.length > 1) {
+        data.sort((a, b) => {
+          const aLoc = (a.location || '').toLowerCase();
+          const bLoc = (b.location || '').toLowerCase();
+          const aIdx = locations.findIndex(l => aLoc.toLowerCase().includes(l.toLowerCase()));
+          const bIdx = locations.findIndex(l => bLoc.toLowerCase().includes(l.toLowerCase()));
+          const aPriority = aIdx === -1 ? locations.length : aIdx;
+          const bPriority = bIdx === -1 ? locations.length : bIdx;
+          return aPriority - bPriority;
+        });
+      }
       renderTable(data);
       updatePag(total, page);
       // Update hero stats with animation
