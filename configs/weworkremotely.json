@@ -1,0 +1,16 @@
+{
+  "source": "weworkremotely",
+  "base_url": "https://weworkremotely.com/categories",
+  "rate_limit_seconds": 1.5,
+  "request_headers": {
+    "User-Agent": "JobPulse/1.0 (portfolio demo; github.com/AntoineKoerber/JobPulse)"
+  },
+  "field_map": {
+    "id": "guid",
+    "title": "title",
+    "company": "company",
+    "location": "location",
+    "url": "link",
+    "posted_at": "pubDate"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "source": "adzuna",
+  "base_url": "https://api.adzuna.com/v1/api/jobs",
+  "rate_limit_seconds": 0.5,
+  "request_headers": {
+    "User-Agent": "JobPulse/1.0 (portfolio demo; github.com/AntoineKoerber/JobPulse)"
+  },
+  "field_map": {
+    "id": "id",
+    "title": "title",
+    "company": "company.display_name",
+    "location": "location.display_name",
+    "url": "redirect_url",
+    "posted_at": "created"
+  }
+}
