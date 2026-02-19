@@ -229,8 +229,8 @@
 
     /* ── Search Hero ─────────────────────────────── */
     .hero {
-      padding: 6rem 2rem 5rem;
-      background: var(--bg-surface);
+      padding: 5rem 2rem 4rem;
+      background: linear-gradient(180deg, #f0f4ff 0%, #ffffff 50%, var(--bg-base) 100%);
       text-align: center;
       position: relative;
       overflow: hidden;
@@ -244,9 +244,9 @@
       top: -25%;
       left: -25%;
       background:
-        radial-gradient(circle at 20% 30%, rgba(80,70,229,0.08) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(5,150,105,0.06) 0%, transparent 40%),
-        radial-gradient(circle at 50% 50%, rgba(217,119,6,0.04) 0%, transparent 60%);
+        radial-gradient(circle at 20% 30%, rgba(80,70,229,0.15) 0%, transparent 40%),
+        radial-gradient(circle at 80% 60%, rgba(5,150,105,0.12) 0%, transparent 35%),
+        radial-gradient(circle at 60% 80%, rgba(6,182,212,0.1) 0%, transparent 40%);
       pointer-events: none;
       animation: float 20s ease-in-out infinite;
     }
@@ -260,31 +260,59 @@
     .hero-orb {
       position: absolute;
       border-radius: 50%;
-      filter: blur(60px);
+      filter: blur(80px);
     }
     .hero-orb:nth-child(1) {
-      width: 400px;
-      height: 400px;
-      top: -150px;
-      right: 10%;
-      background: rgba(80,70,229,0.12);
+      width: 500px;
+      height: 500px;
+      top: -200px;
+      right: 5%;
+      background: rgba(80,70,229,0.2);
       animation: float 15s ease-in-out infinite;
     }
     .hero-orb:nth-child(2) {
-      width: 300px;
-      height: 300px;
-      bottom: -100px;
-      left: 5%;
-      background: rgba(5,150,105,0.1);
+      width: 400px;
+      height: 400px;
+      bottom: -150px;
+      left: 0%;
+      background: rgba(5,150,105,0.15);
       animation: float 18s ease-in-out infinite reverse;
     }
     .hero-orb:nth-child(3) {
-      width: 200px;
-      height: 200px;
-      top: 40%;
-      left: 15%;
-      background: rgba(217,119,6,0.08);
+      width: 300px;
+      height: 300px;
+      top: 20%;
+      left: 10%;
+      background: rgba(6,182,212,0.12);
       animation: breathe 10s ease-in-out infinite;
+    }
+    /* Floating tech badges */
+    .hero-badges {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .hero-badge {
+      position: absolute;
+      padding: 0.4rem 0.8rem;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(0,0,0,0.06);
+      border-radius: 100px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      animation: float 12s ease-in-out infinite;
+    }
+    .hero-badge:nth-child(1) { top: 20%; left: 8%; animation-delay: 0s; }
+    .hero-badge:nth-child(2) { top: 35%; right: 10%; animation-delay: -2s; }
+    .hero-badge:nth-child(3) { bottom: 30%; left: 5%; animation-delay: -4s; }
+    .hero-badge:nth-child(4) { top: 15%; right: 15%; animation-delay: -6s; }
+    .hero-badge:nth-child(5) { bottom: 25%; right: 8%; animation-delay: -3s; }
+    .hero-badge:nth-child(6) { top: 60%; left: 12%; animation-delay: -5s; }
+    @media (max-width: 900px) {
+      .hero-badges { display: none; }
     }
     .hero-inner {
       max-width: 600px;
@@ -331,14 +359,23 @@
       animation: pulse 2s ease-in-out infinite;
     }
     .hero h1 {
-      font-size: 3.25rem;
+      font-size: 3.5rem;
       font-weight: 700;
       letter-spacing: -0.035em;
       line-height: 1.1;
-      margin-bottom: 2.5rem;
+      margin-bottom: 1rem;
       color: var(--text-primary);
       animation: fadeUp 0.8s var(--ease-smooth);
       animation-delay: 0.1s;
+      animation-fill-mode: both;
+    }
+    .hero-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      margin-bottom: 2.5rem;
+      font-weight: 400;
+      animation: fadeUp 0.8s var(--ease-smooth);
+      animation-delay: 0.15s;
       animation-fill-mode: both;
     }
     .hero-browse {
@@ -1243,9 +1280,18 @@
     <div class="hero-orb"></div>
     <div class="hero-orb"></div>
   </div>
+  <div class="hero-badges">
+    <span class="hero-badge">React</span>
+    <span class="hero-badge">Python</span>
+    <span class="hero-badge">AWS</span>
+    <span class="hero-badge">Node.js</span>
+    <span class="hero-badge">DevOps</span>
+    <span class="hero-badge">TypeScript</span>
+  </div>
   <div class="hero-inner">
     <p class="hero-eyebrow"><span class="dot"></span> <span id="hero-total">—</span> jobs from 3 sources</p>
     <h1>Tech jobs, all in one place</h1>
+    <p class="hero-subtitle">Search thousands of remote and on-site positions from top tech companies</p>
     <div class="hero-search">
       <div class="autocomplete-wrap">
         <input class="filter-input" type="text" id="filter-role" placeholder="Filter by title or keyword..." autocomplete="off" />
