@@ -233,7 +233,9 @@
       background: linear-gradient(180deg, #f0f4ff 0%, #ffffff 50%, var(--bg-base) 100%);
       text-align: center;
       position: relative;
-      overflow: hidden;
+      overflow-x: clip;
+      overflow-y: visible;
+      z-index: 10;
     }
     /* Animated gradient mesh */
     .hero::before {
@@ -319,7 +321,7 @@
       margin: 0 auto;
       animation: fadeUp 0.8s var(--ease-smooth);
       position: relative;
-      z-index: 1;
+      z-index: 10;
     }
     .hero-eyebrow {
       display: inline-flex;
