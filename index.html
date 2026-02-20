@@ -854,8 +854,8 @@
 
     .job-card {
       display: grid;
-      grid-template-columns: 32px 40px minmax(200px, 2fr) minmax(120px, 1fr) minmax(100px, 1fr) minmax(100px, 140px) 85px 36px;
-      gap: 1.25rem;
+      grid-template-columns: 32px minmax(200px, 2fr) minmax(180px, 1fr) minmax(100px, 1fr) minmax(100px, 140px) 85px 36px;
+      gap: 1.5rem;
       align-items: center;
       padding: 1.25rem 0;
       background: transparent;
@@ -924,13 +924,13 @@
     .job-company svg { width: 13px; height: 13px; opacity: 0.4; flex-shrink: 0; }
 
     .company-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      display: flex;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.85rem;
+      font-size: 0.55rem;
       font-weight: 600;
       flex-shrink: 0;
       text-transform: uppercase;
@@ -1403,8 +1403,7 @@
 
     /* ── Responsive ────────────────────────────────── */
     @media (max-width: 1100px) {
-      .job-card { grid-template-columns: 28px 36px 1fr auto auto; }
-      .company-avatar { width: 36px; height: 36px; font-size: 0.75rem; }
+      .job-card { grid-template-columns: 28px 1fr auto auto; }
       .job-location, .job-tags, .jobs-header { display: none; }
     }
     @media (max-width: 900px) {
@@ -1434,7 +1433,7 @@
     }
     @media (max-width: 600px) {
       .job-card {
-        grid-template-columns: 28px 32px 1fr auto;
+        grid-template-columns: 28px 1fr auto;
         padding: 1rem 0;
         gap: 0.75rem;
       }
@@ -1442,7 +1441,6 @@
         margin: 0 -1rem;
         padding: 1rem;
       }
-      .company-avatar { width: 32px; height: 32px; font-size: 0.7rem; border-radius: 8px; }
       .job-source, .job-arrow { display: none; }
       .filters-sidebar { flex-direction: column; gap: 1.5rem; }
       .filter-box { min-width: 0; }
@@ -2210,10 +2208,9 @@
         <button class="bookmark-btn${saved ? ' saved' : ''}" data-id="${j.id}" title="${saved ? 'Remove from saved' : 'Save this job'}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
         </button>
-        <div class="company-avatar" style="background:${avatar.bg};color:${avatar.fg}">${avatar.initials}</div>
         <div class="job-main">
           <div class="job-title">${title}</div>
-          <span class="job-company">${company}</span>
+          <span class="job-company"><span class="company-avatar" style="background:${avatar.bg};color:${avatar.fg}">${avatar.initials}</span>${company}</span>
         </div>
         <div class="job-location">
           <span class="job-location-text">
