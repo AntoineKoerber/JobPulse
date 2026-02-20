@@ -854,10 +854,10 @@
 
     .job-card {
       display: grid;
-      grid-template-columns: 32px minmax(250px, 2.5fr) minmax(140px, 1fr) minmax(120px, 1fr) minmax(90px, 120px) 70px 32px;
-      gap: 1rem;
-      align-items: center;
-      padding: 1rem 0;
+      grid-template-columns: 32px minmax(280px, 2fr) minmax(160px, auto) auto minmax(80px, 100px) 70px 32px;
+      gap: 1.25rem;
+      align-items: start;
+      padding: 1.25rem 0;
       background: transparent;
       border: none;
       border-bottom: 1px solid var(--border-subtle);
@@ -874,8 +874,8 @@
     }
     .job-card:hover {
       background: var(--bg-elevated);
-      margin: 0 -1rem;
-      padding: 1rem;
+      margin: 0 -1.25rem;
+      padding: 1.25rem;
       border-radius: var(--radius);
       border-color: transparent;
     }
@@ -905,11 +905,7 @@
       font-size: 0.9rem;
       font-weight: 500;
       color: var(--text-primary);
-      line-height: 1.35;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      line-height: 1.4;
       transition: color 0.3s var(--ease-smooth);
     }
     .job-company {
@@ -941,19 +937,14 @@
       gap: 0.4rem;
       font-size: 0.8rem;
       color: var(--text-secondary);
-      min-width: 0;
     }
     .job-location-text {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 0.3rem;
+      line-height: 1.3;
     }
-    .job-location-text span {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .job-location svg { width: 13px; height: 13px; opacity: 0.4; flex-shrink: 0; }
+    .job-location svg { width: 13px; height: 13px; opacity: 0.4; flex-shrink: 0; margin-top: 2px; }
 
     .work-type {
       display: inline-flex;
@@ -983,9 +974,8 @@
 
     .job-tags {
       display: flex;
-      flex-direction: column;
-      gap: 0.3rem;
-      min-width: 0;
+      flex-wrap: wrap;
+      gap: 0.35rem;
     }
 
     .job-salary {
@@ -1030,17 +1020,14 @@
     .job-arrow svg { width: 18px; height: 18px; }
 
     .tag {
-      display: block;
-      padding: 0.25rem 0.6rem;
+      display: inline-block;
+      padding: 0.3rem 0.6rem;
       background: var(--bg-elevated);
       color: var(--text-secondary);
       border-radius: 6px;
-      font-size: 0.7rem;
+      font-size: 0.75rem;
       font-weight: 450;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 100%;
+      line-height: 1.2;
     }
 
     .no-results {
@@ -2224,7 +2211,7 @@
         <div class="job-location">
           <span class="job-location-text">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span>${loc}</span>
+            ${loc}
           </span>
           ${workTypeBadge(workType)}
         </div>
