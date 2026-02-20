@@ -854,10 +854,10 @@
 
     .job-card {
       display: grid;
-      grid-template-columns: 32px minmax(200px, 2fr) minmax(180px, 1fr) minmax(100px, 1fr) minmax(100px, 140px) 85px 36px;
-      gap: 1.5rem;
+      grid-template-columns: 32px minmax(250px, 2.5fr) minmax(140px, 1fr) minmax(120px, 1fr) minmax(90px, 120px) 70px 32px;
+      gap: 1rem;
       align-items: center;
-      padding: 1.25rem 0;
+      padding: 1rem 0;
       background: transparent;
       border: none;
       border-bottom: 1px solid var(--border-subtle);
@@ -874,11 +874,10 @@
     }
     .job-card:hover {
       background: var(--bg-elevated);
-      margin: 0 -1.5rem;
-      padding: 1.25rem 1.5rem;
+      margin: 0 -1rem;
+      padding: 1rem;
       border-radius: var(--radius);
       border-color: transparent;
-      transform: scale(1.01);
     }
     .job-card:hover .job-title {
       color: var(--accent);
@@ -901,25 +900,24 @@
     .job-card:nth-child(10) { animation-delay: 0.18s; }
     .job-card:hover .job-arrow { opacity: 1; }
 
-    .job-main { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+    .job-main { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
     .job-title {
       font-size: 0.9rem;
       font-weight: 500;
       color: var(--text-primary);
-      white-space: nowrap;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
       overflow: hidden;
-      text-overflow: ellipsis;
       transition: color 0.3s var(--ease-smooth);
     }
     .job-company {
       display: flex;
       align-items: center;
-      gap: 0.35rem;
+      gap: 0.4rem;
       font-size: 0.8rem;
       color: var(--text-tertiary);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
     .job-company svg { width: 13px; height: 13px; opacity: 0.4; flex-shrink: 0; }
 
@@ -940,20 +938,22 @@
     .job-location {
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
-      font-size: 0.85rem;
+      gap: 0.4rem;
+      font-size: 0.8rem;
       color: var(--text-secondary);
       min-width: 0;
     }
     .job-location-text {
       display: flex;
       align-items: center;
-      gap: 0.35rem;
+      gap: 0.3rem;
+    }
+    .job-location-text span {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .job-location svg { width: 14px; height: 14px; opacity: 0.4; flex-shrink: 0; }
+    .job-location svg { width: 13px; height: 13px; opacity: 0.4; flex-shrink: 0; }
 
     .work-type {
       display: inline-flex;
@@ -981,7 +981,12 @@
     }
     .work-type svg { width: 10px; height: 10px; }
 
-    .job-tags { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+    .job-tags {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      min-width: 0;
+    }
 
     .job-salary {
       font-size: 0.85rem;
@@ -1025,13 +1030,17 @@
     .job-arrow svg { width: 18px; height: 18px; }
 
     .tag {
-      display: inline-block;
-      padding: 0.2rem 0.5rem;
+      display: block;
+      padding: 0.25rem 0.6rem;
       background: var(--bg-elevated);
       color: var(--text-secondary);
-      border-radius: 100px;
+      border-radius: 6px;
       font-size: 0.7rem;
       font-weight: 450;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
 
     .no-results {
@@ -2215,7 +2224,7 @@
         <div class="job-location">
           <span class="job-location-text">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            ${loc}
+            <span>${loc}</span>
           </span>
           ${workTypeBadge(workType)}
         </div>
