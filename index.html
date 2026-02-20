@@ -2688,9 +2688,16 @@
     initAlertBanner();
 
     // Update alert banner visibility when filters change
-    ['filter-role', 'filter-location', 'filter-salary', 'filter-source'].forEach(id => {
+    ['filter-role', 'filter-location', 'filter-salary'].forEach(id => {
       document.getElementById(id).addEventListener('change', updateAlertBannerVisibility);
       document.getElementById(id).addEventListener('input', updateAlertBannerVisibility);
+    });
+
+    // Source dropdown should immediately trigger reload
+    document.getElementById('filter-source').addEventListener('change', () => {
+      page = 1;
+      loadJobs();
+      updateAlertBannerVisibility();
     });
     document.querySelectorAll('.chip input').forEach(input => {
       input.addEventListener('change', updateAlertBannerVisibility);
