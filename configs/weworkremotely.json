@@ -1,6 +1,6 @@
 {
   "source": "weworkremotely",
-  "base_url": "https://weworkremotely.com/categories",
+  "base_url": "https://weworkremotely.com/remote-jobs.rss",
   "rate_limit_seconds": 1.5,
   "request_headers": {
     "User-Agent": "JobPulse/1.0 (portfolio demo; github.com/AntoineKoerber/JobPulse)"
