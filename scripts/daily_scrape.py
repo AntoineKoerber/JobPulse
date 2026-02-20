@@ -31,7 +31,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("daily_scrape")
 
-SOURCES = ["remoteok", "arbeitnow", "jobicy"]
+SOURCES = ["remoteok", "arbeitnow", "jobicy", "weworkremotely", "adzuna"]
 
 
 async def run_scrape():

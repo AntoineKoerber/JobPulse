@@ -39,7 +39,7 @@ class WeWorkRemotelyStrategy(BaseScrapeStrategy):
 
         listings = []
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             for category in self.CATEGORIES:
                 await humanizer.delay()
 
