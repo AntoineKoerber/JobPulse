@@ -854,8 +854,8 @@
 
     .job-card {
       display: grid;
-      grid-template-columns: 32px minmax(280px, 2fr) minmax(160px, auto) auto minmax(80px, 100px) 70px 32px;
-      gap: 1.25rem;
+      grid-template-columns: 32px minmax(250px, 2fr) minmax(130px, 180px) minmax(100px, 150px) minmax(80px, 120px) 75px 32px;
+      gap: 1rem;
       align-items: center;
       padding: 1.25rem 0;
       background: transparent;
@@ -1030,6 +1030,9 @@
       font-size: 0.75rem;
       font-weight: 450;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
 
     .no-results {
@@ -2196,7 +2199,8 @@
       const rawLoc = decodeHtml(j.location) || '';
       const loc = esc(titleCase(rawLoc) || '—');
       const hasSalary = j.salary_min || j.salary_max;
-      const tags = (j.tags || []).slice(0, 2).map(t => `<span class="tag">${esc(fmtTag(decodeHtml(t)))}</span>`).join('');
+      const firstTag = (j.tags || [])[0];
+      const tags = firstTag ? `<span class="tag">${esc(fmtTag(decodeHtml(firstTag)))}</span>` : '';
       const url = j.url || '#';
       const workType = getWorkType(rawLoc, j.source, j.tags);
 
