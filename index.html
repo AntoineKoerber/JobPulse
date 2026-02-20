@@ -986,13 +986,11 @@
       padding: 0.3rem 0.6rem;
       border-radius: 100px;
       font-size: 0.65rem;
-      font-weight: 500;
+      font-weight: 600;
       text-align: center;
       white-space: nowrap;
       background: var(--bg-elevated);
       color: var(--text-tertiary);
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
     }
     .job-source.remoteok { background: var(--green-glow); color: var(--green); }
     .job-source.arbeitnow { background: var(--bg-elevated); color: var(--text-tertiary); }
@@ -2116,7 +2114,7 @@
     const effectiveWorkType = workTypes.length > 0 ? workTypes : (heroWorkType !== 'all' ? [heroWorkType] : []);
     if (effectiveWorkType.length === 1) {
       if (effectiveWorkType[0] === 'remote') {
-        f += '&or=(source.in.(remoteok,jobicy),location.ilike.*remote*)';
+        f += '&or=(source.in.(remoteok,jobicy,weworkremotely),location.ilike.*remote*)';
       } else if (effectiveWorkType[0] === 'hybrid') {
         f += '&location=ilike.*hybrid*';
       } else if (effectiveWorkType[0] === 'onsite') {
@@ -2275,7 +2273,13 @@
   }
 
   function fmtSource(s) {
-    const map = { remoteok: 'RemoteOK', arbeitnow: 'Arbeitnow', jobicy: 'Jobicy' };
+    const map = {
+      remoteok: 'RemoteOK',
+      arbeitnow: 'Arbeitnow',
+      jobicy: 'Jobicy',
+      weworkremotely: 'WWR',
+      adzuna: 'Adzuna'
+    };
     return map[s] || s;
   }
 
@@ -2284,8 +2288,8 @@
     const allTags = (tags || []).map(t => t.toLowerCase()).join(' ');
     const combined = loc + ' ' + allTags;
 
-    // RemoteOK and Jobicy are remote-first boards
-    if (source === 'remoteok' || source === 'jobicy') return 'remote';
+    // RemoteOK, Jobicy, and WeWorkRemotely are remote-first boards
+    if (source === 'remoteok' || source === 'jobicy' || source === 'weworkremotely') return 'remote';
 
     // Check for hybrid indicators
     if (combined.includes('hybrid')) return 'hybrid';
