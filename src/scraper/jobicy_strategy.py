@@ -8,6 +8,7 @@ a valuable source for compensation analytics.
 import html
 import httpx
 import logging
+import time
 from typing import List
 from src.scraper.base_strategy import BaseScrapeStrategy
 from src.scraper.humanizer import Humanizer
@@ -28,12 +29,26 @@ class JobicyStrategy(BaseScrapeStrategy):
 
         await humanizer.delay()
 
+        url = f"{base_url}?count={max_count}"
+        max_attempts = 3
+        data = None
         async with httpx.AsyncClient(timeout=30.0) as client:
-            url = f"{base_url}?count={max_count}"
-            logger.info("Fetching from Jobicy: %s", url)
-            response = await client.get(url, headers=headers)
-            response.raise_for_status()
-            data = response.json()
+            for attempt in range(max_attempts):
+                logger.info("Fetching from Jobicy: %s (attempt %d/%d)", url, attempt + 1, max_attempts)
+                response = await client.get(url, headers=headers)
+                response.raise_for_status()
+                try:
+                    data = response.json()
+                    break
+                except Exception as e:
+                    if attempt < max_attempts - 1:
+                        delay = 2.0 * (2 ** attempt)
+                        logger.warning("Jobicy returned invalid JSON, retrying in %.0fs: %s", delay, e)
+                        time.sleep(delay)
+                    else:
+                        raise
+        if data is None:
+            return []
 
         items = data.get("jobs", [])
         listings = []
