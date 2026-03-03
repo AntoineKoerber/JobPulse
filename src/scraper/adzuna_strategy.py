@@ -66,14 +66,7 @@ class AdzunaStrategy(BaseScrapeStrategy):
                         }
 
                         logger.info("Fetching Adzuna: %s - %s", country.upper(), search_term)
-                        response = await client.get(url, params=params, headers=headers)
-
-                        if response.status_code == 401:
-                            logger.error("Adzuna API authentication failed. Check credentials.")
-                            return listings
-
-                        response.raise_for_status()
-                        data = response.json()
+                        data = await self._http_get_json(client, url, params=params, headers=headers)
 
                         for job in data.get("results", []):
                             listing = self._parse_job(job, country)
@@ -81,6 +74,9 @@ class AdzunaStrategy(BaseScrapeStrategy):
                                 listings.append(listing)
 
                     except httpx.HTTPStatusError as e:
+                        if e.response.status_code == 401:
+                            logger.error("Adzuna API authentication failed. Check credentials.")
+                            return listings
                         logger.warning("Adzuna API error for %s/%s: %s", country, search_term, e)
                         continue
                     except Exception as e:

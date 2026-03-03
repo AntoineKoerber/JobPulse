@@ -31,11 +31,10 @@ class WeWorkRemotelyStrategy(BaseScrapeStrategy):
             logger.info("Fetching WWR main RSS feed: %s", feed_url)
 
             try:
-                response = await client.get(feed_url, headers=headers)
-                response.raise_for_status()
+                text = await self._http_get_text(client, feed_url, headers=headers)
 
                 # Parse RSS XML
-                root = ET.fromstring(response.text)
+                root = ET.fromstring(text)
 
                 for item in root.findall(".//item"):
                     listing = self._parse_item(item)

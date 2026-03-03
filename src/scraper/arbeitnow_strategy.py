@@ -33,9 +33,7 @@ class ArbeitnowStrategy(BaseScrapeStrategy):
 
                 url = f"{base_url}?page={page}"
                 logger.info("Fetching from Arbeitnow: %s", url)
-                response = await client.get(url, headers=headers)
-                response.raise_for_status()
-                data = response.json()
+                data = await self._http_get_json(client, url, headers=headers)
 
                 items = data.get("data", [])
                 if not items:

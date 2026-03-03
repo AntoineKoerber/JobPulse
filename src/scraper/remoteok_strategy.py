@@ -27,9 +27,7 @@ class RemoteOKStrategy(BaseScrapeStrategy):
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             logger.info("Fetching from RemoteOK: %s", base_url)
-            response = await client.get(base_url, headers=headers)
-            response.raise_for_status()
-            data = response.json()
+            data = await self._http_get_json(client, base_url, headers=headers)
 
         # RemoteOK returns an array where first element is a legal notice
         if isinstance(data, list) and len(data) > 0:
