@@ -19,6 +19,7 @@ from src.pipeline.normalizer import (
     extract_salary, normalize_tags,
 )
 from src.pipeline.validator import score_listing, score_scrape, should_reject
+from src.pipeline.filter import relevance_score
 from src.pipeline.change_detector import detect_changes, build_change_summary
 from src.resilience.stability_tracker import update_stability
 from src.resilience.fallback import get_last_successful_scrape, record_fallback_usage
@@ -207,14 +208,22 @@ async def list_jobs(
     if salary_min:
         query = query.gte("salary_min", salary_min)
 
-    offset = (page - 1) * limit
-    result = query.order("last_seen", desc=True).range(offset, offset + limit - 1).execute()
+    # Fetch all matching rows so we can sort by relevance tier before paginating.
+    # Python's sort is stable: within the same tier, last_seen order is preserved.
+    result = query.order("last_seen", desc=True).execute()
+    all_listings = result.data
+    all_listings.sort(
+        key=lambda j: relevance_score(j.get("title", ""), j.get("tags") or []),
+        reverse=True,
+    )
 
+    total = len(all_listings)
+    offset = (page - 1) * limit
     return {
-        "total": result.count or 0,
+        "total": total,
         "page": page,
         "limit": limit,
-        "listings": result.data,
+        "listings": all_listings[offset: offset + limit],
     }
 
 
