@@ -122,6 +122,13 @@ _ADJACENT_PATTERNS = [
     for kw in ADJACENT_TECH_KEYWORDS
 ]
 
+# If any of these match, the listing is downgraded to tier 1 (adjacent)
+# even if a core SWE keyword also fires (e.g. "Customer Engineer").
+_DOWNGRADE_PATTERNS = [
+    re.compile(r"\bcustomer\s+\w*\s*(engineer|architect|success|support|specialist)\b", re.IGNORECASE),
+    re.compile(r"\b(sales|account)\s+(engineer|executive|manager)\b", re.IGNORECASE),
+]
+
 
 def is_relevant(listing: JobListing) -> bool:
     """Return True if the listing is tech/software-relevant."""
@@ -145,12 +152,16 @@ def relevance_score(title: str, tags: list) -> int:
 
     2 = core SWE (shown first)
     1 = adjacent tech
-    0 = borderline / unclassified
+    0 = not relevant (will be excluded from the API response)
     """
+    is_downgraded = any(p.search(title) for p in _DOWNGRADE_PATTERNS)
+
     if any(p.search(title) for p in _CORE_SWE_PATTERNS):
-        return 2
+        return 1 if is_downgraded else 2
+
     if any(p.search(title) for p in _ADJACENT_PATTERNS):
         return 1
+
     # Tag-based fallback
     tags_lower = {t.lower() for t in (tags or [])}
     if tags_lower & {"software", "engineering", "developer", "backend", "frontend", "devops"}:

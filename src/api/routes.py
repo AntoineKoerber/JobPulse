@@ -196,7 +196,6 @@ async def list_jobs(
         "id, external_id, source, title, company, location, "
         "salary_min, salary_max, currency, tags, url, posted_at, "
         "first_seen, last_seen, quality_score",
-        count="exact",
     ).eq("is_active", True)
 
     if source:
@@ -208,10 +207,14 @@ async def list_jobs(
     if salary_min:
         query = query.gte("salary_min", salary_min)
 
-    # Fetch all matching rows so we can sort by relevance tier before paginating.
-    # Python's sort is stable: within the same tier, last_seen order is preserved.
+    # Fetch all matching rows, drop irrelevant ones (pre-filter DB data),
+    # then sort by relevance tier. Python's sort is stable so within each
+    # tier the last_seen order from the DB is preserved.
     result = query.order("last_seen", desc=True).execute()
-    all_listings = result.data
+    all_listings = [
+        j for j in result.data
+        if relevance_score(j.get("title", ""), j.get("tags") or []) > 0
+    ]
     all_listings.sort(
         key=lambda j: relevance_score(j.get("title", ""), j.get("tags") or []),
         reverse=True,
