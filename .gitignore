@@ -6,3 +6,5 @@ venv/
 .env
 *.db
 .DS_Store
+.server.pid
+.server.log
