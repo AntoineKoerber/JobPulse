@@ -21,6 +21,7 @@ from src.pipeline.normalizer import (
     extract_salary, normalize_tags,
 )
 from src.pipeline.validator import score_listing, score_scrape, should_reject
+from src.pipeline.filter import filter_relevant
 from src.pipeline.change_detector import detect_changes, build_change_summary
 from src.resilience.stability_tracker import update_stability
 from src.resilience.fallback import get_last_successful_scrape, record_fallback_usage
@@ -73,6 +74,10 @@ async def run_scrape():
                 )
                 listing.quality_score = score_listing(listing)
                 normalized.append(listing)
+
+            normalized, dropped = filter_relevant(normalized)
+            if dropped:
+                logger.info("%s: filtered %d irrelevant listings", source_name, dropped)
 
             mean_score, issues = score_scrape(normalized)
             if issues:
