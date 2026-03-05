@@ -1468,6 +1468,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         <span>Analytics</span>
       </button>
+      <button class="nav-link" id="nav-gigs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <span>Gigs</span>
+      </button>
     </div>
   </div>
 </nav>
@@ -1608,7 +1612,6 @@
         <div class="listing-tabs">
           <button class="listing-tab active" id="tab-all">All Jobs</button>
           <button class="listing-tab" id="tab-saved">Saved <span class="saved-count">(0)</span></button>
-          <button class="listing-tab" id="tab-gigs">Gigs</button>
         </div>
         <span class="card-badge" id="results-count">—</span>
       </div>
@@ -1635,16 +1638,10 @@
           <div class="skeleton-card"><div class="skeleton skeleton-bookmark"></div><div class="skeleton-content"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-subtitle"></div></div><div class="skeleton skeleton-location"></div><div class="skeleton skeleton-salary"></div></div>
         </div>
       </div>
-      <div class="pagination" id="jobs-pagination">
+      <div class="pagination">
         <button id="prev-page" class="btn btn-ghost btn-sm" disabled>&larr; Previous</button>
         <span id="page-info">Page 1</span>
         <button id="next-page" class="btn btn-ghost btn-sm">Next &rarr;</button>
-      </div>
-      <div class="jobs-list" id="gigs-list" style="display:none"></div>
-      <div class="pagination" id="gigs-pagination" style="display:none">
-        <button id="gigs-prev-page" class="btn btn-ghost btn-sm" disabled>&larr; Previous</button>
-        <span id="gigs-page-info">Page 1</span>
-        <button id="gigs-next-page" class="btn btn-ghost btn-sm">Next &rarr;</button>
       </div>
     </section>
   </main>
@@ -1707,6 +1704,37 @@
   </div>
 </div><!-- /analytics-view -->
 
+<!-- ── Gigs View ─────────────────────────────────── -->
+<div class="view" id="gigs-view">
+  <div class="analytics-view">
+    <div class="analytics-header">
+      <h2>Freelance Gigs</h2>
+      <p>Short-term gigs aggregated from Freelancer, Guru, and PeoplePerHour</p>
+    </div>
+    <section class="card table-section">
+      <div class="card-header">
+        <span class="card-title">All Gigs</span>
+        <span class="card-badge" id="gigs-results-count">—</span>
+      </div>
+      <div class="jobs-header">
+        <span></span>
+        <span>Title</span>
+        <span>Platform</span>
+        <span>Skills</span>
+        <span>Budget</span>
+        <span></span>
+        <span></span>
+      </div>
+      <div class="jobs-list" id="gigs-list"></div>
+      <div class="pagination">
+        <button id="gigs-prev-page" class="btn btn-ghost btn-sm" disabled>&larr; Previous</button>
+        <span id="gigs-page-info">Page 1</span>
+        <button id="gigs-next-page" class="btn btn-ghost btn-sm">Next &rarr;</button>
+      </div>
+    </section>
+  </div>
+</div><!-- /gigs-view -->
+
 <footer>
   <p>JobPulse &mdash; Resilient data pipeline demo &mdash; <a href="https://github.com/AntoineKoerber/JobPulse">View Source &amp; Architecture</a></p>
   <div class="footer-tech">
@@ -1740,7 +1768,7 @@
   let allLocations = [];
   let allRoles = [];
   let salaryFilter = 'all'; // 'all', 'has', 'none'
-  let viewMode = 'all'; // 'all' | 'saved' | 'gigs'
+  let viewMode = 'all'; // 'all' | 'saved'
   let heroWorkType = 'all'; // 'all', 'remote', 'hybrid', 'onsite'
   let analyticsLoaded = false;
 
@@ -1977,10 +2005,7 @@
   document.getElementById('brand-home').addEventListener('click', (e) => {
     e.preventDefault();
     // Switch to jobs view if on analytics
-    document.getElementById('nav-jobs').classList.add('active');
-    document.getElementById('nav-analytics').classList.remove('active');
-    document.getElementById('jobs-view').classList.add('active');
-    document.getElementById('analytics-view').classList.remove('active');
+    showView('jobs-view');
     // Clear all filters
     clearAllFilters();
     // Scroll to top
@@ -1988,21 +2013,10 @@
   });
 
   // ── Tab click handlers ──────────────────────
-  function setJobsViewMode(mode) {
-    const isGigs = mode === 'gigs';
-    document.getElementById('jobs-list').style.display = isGigs ? 'none' : '';
-    document.getElementById('jobs-pagination').style.display = isGigs ? 'none' : '';
-    document.getElementById('gigs-list').style.display = isGigs ? '' : 'none';
-    document.getElementById('gigs-pagination').style.display = isGigs ? '' : 'none';
-    document.querySelector('.jobs-header').style.display = isGigs ? 'none' : '';
-  }
-
   document.getElementById('tab-all').addEventListener('click', () => {
     viewMode = 'all';
     document.getElementById('tab-all').classList.add('active');
     document.getElementById('tab-saved').classList.remove('active');
-    document.getElementById('tab-gigs').classList.remove('active');
-    setJobsViewMode('all');
     page = 1;
     loadJobs();
   });
@@ -2010,18 +2024,8 @@
     viewMode = 'saved';
     document.getElementById('tab-saved').classList.add('active');
     document.getElementById('tab-all').classList.remove('active');
-    document.getElementById('tab-gigs').classList.remove('active');
-    setJobsViewMode('all');
     page = 1;
     loadJobs();
-  });
-  document.getElementById('tab-gigs').addEventListener('click', () => {
-    viewMode = 'gigs';
-    document.getElementById('tab-gigs').classList.add('active');
-    document.getElementById('tab-all').classList.remove('active');
-    document.getElementById('tab-saved').classList.remove('active');
-    setJobsViewMode('gigs');
-    if (!gigsLoaded) { gigsLoaded = true; loadGigs(); }
   });
 
   // ── Browse link smooth scroll ────────────────────
@@ -2030,24 +2034,30 @@
     document.getElementById('listings').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
+  // ── Navigation helpers ─────────────────────────
+  function showView(active) {
+    ['jobs-view', 'analytics-view', 'gigs-view'].forEach(id => {
+      document.getElementById(id).classList.toggle('active', id === active);
+    });
+    ['nav-jobs', 'nav-analytics', 'nav-gigs'].forEach(id => {
+      document.getElementById(id).classList.toggle('active',
+        id === 'nav-' + active.replace('-view', ''));
+    });
+  }
+
   // ── Navigation handlers ────────────────────────
   document.getElementById('nav-jobs').addEventListener('click', () => {
-    document.getElementById('nav-jobs').classList.add('active');
-    document.getElementById('nav-analytics').classList.remove('active');
-    document.getElementById('jobs-view').classList.add('active');
-    document.getElementById('analytics-view').classList.remove('active');
+    showView('jobs-view');
   });
 
   document.getElementById('nav-analytics').addEventListener('click', () => {
-    document.getElementById('nav-analytics').classList.add('active');
-    document.getElementById('nav-jobs').classList.remove('active');
-    document.getElementById('analytics-view').classList.add('active');
-    document.getElementById('jobs-view').classList.remove('active');
-    // Lazy load analytics on first view
-    if (!analyticsLoaded) {
-      loadInsights();
-      analyticsLoaded = true;
-    }
+    showView('analytics-view');
+    if (!analyticsLoaded) { loadInsights(); analyticsLoaded = true; }
+  });
+
+  document.getElementById('nav-gigs').addEventListener('click', () => {
+    showView('gigs-view');
+    if (!gigsLoaded) { gigsLoaded = true; loadGigs(); }
   });
 
   // ── Bookmark click delegation ─────────────────
@@ -2115,7 +2125,7 @@
       document.getElementById('gigs-page-info').textContent = `Page ${gigsPage} of ${mx}`;
       document.getElementById('gigs-prev-page').disabled = gigsPage <= 1;
       document.getElementById('gigs-next-page').disabled = gigsPage >= mx;
-      document.getElementById('results-count').textContent = `${total.toLocaleString()} gigs`;
+      document.getElementById('gigs-results-count').textContent = `${total.toLocaleString()} gigs`;
     } catch (e) { console.error('Failed to load gigs:', e); }
   }
 
