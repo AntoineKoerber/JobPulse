@@ -1005,6 +1005,9 @@
     .job-source.jobicy { background: var(--orange-glow); color: var(--orange); }
     .job-source.weworkremotely { background: rgba(59,130,246,0.1); color: #3b82f6; }
     .job-source.adzuna { background: rgba(168,85,247,0.1); color: #a855f7; }
+    .job-source.freelancer { background: rgba(249,115,22,0.1); color: #f97316; }
+    .job-source.guru { background: rgba(16,185,129,0.1); color: #10b981; }
+    .job-source.peopleperhour { background: rgba(239,68,68,0.1); color: #ef4444; }
 
     .job-arrow {
       display: flex;
@@ -1605,6 +1608,7 @@
         <div class="listing-tabs">
           <button class="listing-tab active" id="tab-all">All Jobs</button>
           <button class="listing-tab" id="tab-saved">Saved <span class="saved-count">(0)</span></button>
+          <button class="listing-tab" id="tab-gigs">Gigs</button>
         </div>
         <span class="card-badge" id="results-count">—</span>
       </div>
@@ -1631,10 +1635,16 @@
           <div class="skeleton-card"><div class="skeleton skeleton-bookmark"></div><div class="skeleton-content"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-subtitle"></div></div><div class="skeleton skeleton-location"></div><div class="skeleton skeleton-salary"></div></div>
         </div>
       </div>
-      <div class="pagination">
+      <div class="pagination" id="jobs-pagination">
         <button id="prev-page" class="btn btn-ghost btn-sm" disabled>&larr; Previous</button>
         <span id="page-info">Page 1</span>
         <button id="next-page" class="btn btn-ghost btn-sm">Next &rarr;</button>
+      </div>
+      <div class="jobs-list" id="gigs-list" style="display:none"></div>
+      <div class="pagination" id="gigs-pagination" style="display:none">
+        <button id="gigs-prev-page" class="btn btn-ghost btn-sm" disabled>&larr; Previous</button>
+        <span id="gigs-page-info">Page 1</span>
+        <button id="gigs-next-page" class="btn btn-ghost btn-sm">Next &rarr;</button>
       </div>
     </section>
   </main>
@@ -1723,12 +1733,14 @@
   let currentUserId = null;
 
   let page = 1;
+  let gigsPage = 1;
+  let gigsLoaded = false;
   const PAGE_SIZE = 50;
   let salaryChart, historyChart, doughnutChart;
   let allLocations = [];
   let allRoles = [];
   let salaryFilter = 'all'; // 'all', 'has', 'none'
-  let viewMode = 'all'; // 'all' | 'saved'
+  let viewMode = 'all'; // 'all' | 'saved' | 'gigs'
   let heroWorkType = 'all'; // 'all', 'remote', 'hybrid', 'onsite'
   let analyticsLoaded = false;
 
@@ -1976,10 +1988,21 @@
   });
 
   // ── Tab click handlers ──────────────────────
+  function setJobsViewMode(mode) {
+    const isGigs = mode === 'gigs';
+    document.getElementById('jobs-list').style.display = isGigs ? 'none' : '';
+    document.getElementById('jobs-pagination').style.display = isGigs ? 'none' : '';
+    document.getElementById('gigs-list').style.display = isGigs ? '' : 'none';
+    document.getElementById('gigs-pagination').style.display = isGigs ? '' : 'none';
+    document.querySelector('.jobs-header').style.display = isGigs ? 'none' : '';
+  }
+
   document.getElementById('tab-all').addEventListener('click', () => {
     viewMode = 'all';
     document.getElementById('tab-all').classList.add('active');
     document.getElementById('tab-saved').classList.remove('active');
+    document.getElementById('tab-gigs').classList.remove('active');
+    setJobsViewMode('all');
     page = 1;
     loadJobs();
   });
@@ -1987,8 +2010,18 @@
     viewMode = 'saved';
     document.getElementById('tab-saved').classList.add('active');
     document.getElementById('tab-all').classList.remove('active');
+    document.getElementById('tab-gigs').classList.remove('active');
+    setJobsViewMode('all');
     page = 1;
     loadJobs();
+  });
+  document.getElementById('tab-gigs').addEventListener('click', () => {
+    viewMode = 'gigs';
+    document.getElementById('tab-gigs').classList.add('active');
+    document.getElementById('tab-all').classList.remove('active');
+    document.getElementById('tab-saved').classList.remove('active');
+    setJobsViewMode('gigs');
+    if (!gigsLoaded) { gigsLoaded = true; loadGigs(); }
   });
 
   // ── Browse link smooth scroll ────────────────────
@@ -2063,6 +2096,56 @@
   });
   document.getElementById('prev-page').addEventListener('click', () => { if (page > 1) { page--; loadJobs(); } });
   document.getElementById('next-page').addEventListener('click', () => { page++; loadJobs(); });
+  document.getElementById('gigs-prev-page').addEventListener('click', () => { if (gigsPage > 1) { gigsPage--; loadGigs(); } });
+  document.getElementById('gigs-next-page').addEventListener('click', () => { gigsPage++; loadGigs(); });
+
+  // ── Gigs ─────────────────────────────────────
+  async function loadGigs() {
+    const off = (gigsPage - 1) * PAGE_SIZE;
+    const f = 'is_active=eq.true&source=in.(freelancer,guru,peopleperhour)&order=last_seen.desc&select=id,source,title,company,location,salary_min,salary_max,currency,tags,url';
+    try {
+      const res = await fetch(
+        `${SB}/rest/v1/job_listings?${f}`,
+        { headers: { ...H, 'Prefer': 'count=exact', 'Range': `${off}-${off + PAGE_SIZE - 1}` } }
+      );
+      const data = await res.json();
+      const total = parseInt(res.headers.get('content-range')?.split('/')[1] || '0');
+      renderGigsTable(data);
+      const mx = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      document.getElementById('gigs-page-info').textContent = `Page ${gigsPage} of ${mx}`;
+      document.getElementById('gigs-prev-page').disabled = gigsPage <= 1;
+      document.getElementById('gigs-next-page').disabled = gigsPage >= mx;
+      document.getElementById('results-count').textContent = `${total.toLocaleString()} gigs`;
+    } catch (e) { console.error('Failed to load gigs:', e); }
+  }
+
+  function renderGigsTable(gigs) {
+    const list = document.getElementById('gigs-list');
+    if (!gigs.length) {
+      list.innerHTML = '<div class="no-results">No gigs yet — run the scraper to populate this feed</div>';
+      return;
+    }
+    list.innerHTML = gigs.map(g => {
+      const sal = fmtSal(g.salary_min, g.salary_max, g.currency);
+      const title = esc(titleCase(decodeHtml(g.title)));
+      const firstTag = (g.tags || [])[0];
+      const tags = firstTag ? `<span class="tag">${esc(fmtTag(decodeHtml(firstTag)))}</span>` : '';
+      const url = g.url || '#';
+      const avatar = getCompanyAvatar(g.company);
+      return `<a href="${url}" target="_blank" rel="noopener" class="job-card">
+        <div style="width:2rem"></div>
+        <div class="job-main">
+          <div class="job-title">${title}</div>
+          <span class="job-company"><span class="company-avatar" style="background:${avatar.bg};color:${avatar.fg}">${avatar.initials}</span>${esc(titleCase(decodeHtml(g.company)))}</span>
+        </div>
+        <div class="job-location"><span class="job-location-text">Remote</span></div>
+        <div class="job-tags">${tags || '<span class="tag" style="opacity:0.3">—</span>'}</div>
+        <span class="job-salary${(g.salary_min || g.salary_max) ? '' : ' none'}">${sal}</span>
+        <span class="job-source ${g.source}">${fmtSource(g.source)}</span>
+        <div class="job-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+      </a>`;
+    }).join('');
+  }
 
   // ── Get selected chips ───────────────────────
   function getSelectedChips(containerId) {
@@ -2286,7 +2369,10 @@
       arbeitnow: 'Arbeitnow',
       jobicy: 'Jobicy',
       weworkremotely: 'WWR',
-      adzuna: 'Adzuna'
+      adzuna: 'Adzuna',
+      freelancer: 'Freelancer',
+      guru: 'Guru',
+      peopleperhour: 'PPH'
     };
     return map[s] || s;
   }
