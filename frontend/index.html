@@ -58,43 +58,78 @@
     </div>
   </section>
 
-  <!-- Filters -->
-  <section class="filters-bar">
-    <input type="text" id="filter-role" placeholder="Role keyword..." />
-    <input type="text" id="filter-location" placeholder="Location..." />
-    <input type="number" id="filter-salary" placeholder="Min salary..." />
-    <select id="filter-source">
-      <option value="">All Sources</option>
-      <option value="remoteok">RemoteOK</option>
-      <option value="arbeitnow">Arbeitnow</option>
-    </select>
-    <button id="filter-btn" class="btn btn-secondary">Filter</button>
-  </section>
+  <!-- Tab Navigation -->
+  <div class="tab-nav">
+    <button id="tab-btn-jobs" class="tab-btn active">Jobs</button>
+    <button id="tab-btn-gigs" class="tab-btn">Gigs</button>
+  </div>
 
-  <!-- Job Listings Table -->
-  <section class="card table-card">
-    <h2>Job Listings</h2>
-    <div class="table-wrap">
-      <table id="jobs-table">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Company</th>
-            <th>Location</th>
-            <th>Salary</th>
-            <th>Tags</th>
-            <th>Source</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="pagination">
-      <button id="prev-page" class="btn btn-sm" disabled>Prev</button>
-      <span id="page-info">Page 1</span>
-      <button id="next-page" class="btn btn-sm">Next</button>
-    </div>
-  </section>
+  <!-- Jobs Tab -->
+  <div id="tab-jobs" class="tab-pane">
+    <!-- Filters -->
+    <section class="filters-bar">
+      <input type="text" id="filter-role" placeholder="Role keyword..." />
+      <input type="text" id="filter-location" placeholder="Location..." />
+      <input type="number" id="filter-salary" placeholder="Min salary..." />
+      <select id="filter-source">
+        <option value="">All Sources</option>
+        <option value="remoteok">RemoteOK</option>
+        <option value="arbeitnow">Arbeitnow</option>
+      </select>
+      <button id="filter-btn" class="btn btn-secondary">Filter</button>
+    </section>
+
+    <!-- Job Listings Table -->
+    <section class="card table-card">
+      <h2>Job Listings</h2>
+      <div class="table-wrap">
+        <table id="jobs-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Company</th>
+              <th>Location</th>
+              <th>Salary</th>
+              <th>Tags</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <button id="prev-page" class="btn btn-sm" disabled>Prev</button>
+        <span id="page-info">Page 1</span>
+        <button id="next-page" class="btn btn-sm">Next</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Gigs Tab -->
+  <div id="tab-gigs" class="tab-pane hidden">
+    <section class="card table-card">
+      <h2>Freelance Gigs</h2>
+      <div class="table-wrap">
+        <table id="gigs-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Budget</th>
+              <th>Platform</th>
+              <th>Tags</th>
+              <th>Link</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <button id="gigs-prev-page" class="btn btn-sm" disabled>Prev</button>
+        <span id="gigs-page-info">Page 1</span>
+        <button id="gigs-next-page" class="btn btn-sm">Next</button>
+      </div>
+    </section>
+  </div>
 </main>
 
 <footer>

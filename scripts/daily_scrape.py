@@ -33,13 +33,14 @@ logging.basicConfig(
 logger = logging.getLogger("daily_scrape")
 
 SOURCES = ["remoteok", "arbeitnow", "jobicy", "weworkremotely", "adzuna"]
+GIG_SOURCES = ["freelancer", "guru", "peopleperhour"]
 
 
 async def run_scrape():
     results = {}
     db = get_db()
 
-    for source_name in SOURCES:
+    for source_name in SOURCES + GIG_SOURCES:
         try:
             now = datetime.now(timezone.utc).isoformat()
 
@@ -75,9 +76,10 @@ async def run_scrape():
                 listing.quality_score = score_listing(listing)
                 normalized.append(listing)
 
-            normalized, dropped = filter_relevant(normalized)
-            if dropped:
-                logger.info("%s: filtered %d irrelevant listings", source_name, dropped)
+            if source_name not in GIG_SOURCES:
+                normalized, dropped = filter_relevant(normalized)
+                if dropped:
+                    logger.info("%s: filtered %d irrelevant listings", source_name, dropped)
 
             mean_score, issues = score_scrape(normalized)
             if issues:
@@ -160,7 +162,7 @@ async def run_scrape():
 
 
 def main():
-    logger.info("Starting daily scrape for sources: %s", SOURCES)
+    logger.info("Starting daily scrape for sources: %s", SOURCES + GIG_SOURCES)
     results = asyncio.run(run_scrape())
     logger.info("Scrape complete: %s", results)
 

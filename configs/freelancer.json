@@ -1,0 +1,13 @@
+{
+  "source": "freelancer",
+  "feed_urls": [
+    "https://www.freelancer.com/jobs/website-design/rss/",
+    "https://www.freelancer.com/jobs/php/rss/",
+    "https://www.freelancer.com/jobs/python/rss/",
+    "https://www.freelancer.com/jobs/javascript/rss/",
+    "https://www.freelancer.com/jobs/graphic-design/rss/",
+    "https://www.freelancer.com/jobs/data-entry/rss/"
+  ],
+  "rate_limit_seconds": 2.0,
+  "request_headers": { "User-Agent": "JobPulse/1.0 (portfolio demo; github.com/AntoineKoerber/JobPulse)" }
+}

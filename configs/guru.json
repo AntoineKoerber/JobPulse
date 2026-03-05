@@ -1,0 +1,6 @@
+{
+  "source": "guru",
+  "base_url": "https://www.guru.com/jobs/rss/",
+  "rate_limit_seconds": 2.0,
+  "request_headers": { "User-Agent": "JobPulse/1.0 (portfolio demo; github.com/AntoineKoerber/JobPulse)" }
+}

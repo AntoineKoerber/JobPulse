@@ -6,6 +6,8 @@
 
   const API = '/api';
   let currentPage = 1;
+  let currentGigsPage = 1;
+  let gigsLoaded = false;
   const pageSize = 50;
 
   // Charts
@@ -56,6 +58,22 @@
   }
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // ── Tab Switching ─────────────────────────────────────────
+  document.getElementById('tab-btn-jobs').addEventListener('click', () => {
+    document.getElementById('tab-btn-jobs').classList.add('active');
+    document.getElementById('tab-btn-gigs').classList.remove('active');
+    document.getElementById('tab-jobs').classList.remove('hidden');
+    document.getElementById('tab-gigs').classList.add('hidden');
+  });
+
+  document.getElementById('tab-btn-gigs').addEventListener('click', () => {
+    document.getElementById('tab-btn-gigs').classList.add('active');
+    document.getElementById('tab-btn-jobs').classList.remove('active');
+    document.getElementById('tab-gigs').classList.remove('hidden');
+    document.getElementById('tab-jobs').classList.add('hidden');
+    if (!gigsLoaded) { gigsLoaded = true; loadGigs(); }
+  });
 
   // ── Filters ───────────────────────────────────────────────
   document.getElementById('filter-btn').addEventListener('click', () => {
@@ -256,6 +274,48 @@
         },
       },
     });
+  }
+
+  // ── Gigs Pagination ───────────────────────────────────────
+  document.getElementById('gigs-prev-page').addEventListener('click', () => {
+    if (currentGigsPage > 1) { currentGigsPage--; loadGigs(); }
+  });
+  document.getElementById('gigs-next-page').addEventListener('click', () => {
+    currentGigsPage++;
+    loadGigs();
+  });
+
+  // ── Load Gigs ─────────────────────────────────────────────
+  async function loadGigs() {
+    const params = new URLSearchParams({ page: currentGigsPage, limit: pageSize });
+    try {
+      const res = await fetch(`${API}/gigs?${params}`);
+      const data = await res.json();
+      renderGigsTable(data.listings);
+      updateGigsPagination(data.total, data.page);
+    } catch (e) {
+      console.error('Failed to load gigs:', e);
+    }
+  }
+
+  function renderGigsTable(listings) {
+    const tbody = document.querySelector('#gigs-table tbody');
+    tbody.innerHTML = listings.map(gig => `
+      <tr>
+        <td>${esc(gig.title)}</td>
+        <td>${formatSalary(gig.salary_min, gig.salary_max, gig.currency)}</td>
+        <td><span class="source-badge ${gig.source}">${esc(gig.company)}</span></td>
+        <td>${(gig.tags || []).slice(0, 4).map(t => `<span class="tag">${esc(t)}</span>`).join('')}</td>
+        <td>${gig.url ? `<a href="${gig.url}" target="_blank">Apply</a>` : '—'}</td>
+      </tr>
+    `).join('');
+  }
+
+  function updateGigsPagination(total, page) {
+    const maxPage = Math.max(1, Math.ceil(total / pageSize));
+    document.getElementById('gigs-page-info').textContent = `Page ${page} of ${maxPage}`;
+    document.getElementById('gigs-prev-page').disabled = page <= 1;
+    document.getElementById('gigs-next-page').disabled = page >= maxPage;
   }
 
   // ── Init ──────────────────────────────────────────────────

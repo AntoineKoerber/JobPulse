@@ -28,6 +28,8 @@ from src.analytics import insights
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
+GIG_SOURCES = ["freelancer", "guru", "peopleperhour"]
+
 
 async def _run_scrape(sources: list) -> dict:
     """Core scrape orchestration — runs all sources sequentially."""
@@ -227,6 +229,31 @@ async def list_jobs(
         "page": page,
         "limit": limit,
         "listings": all_listings[offset: offset + limit],
+    }
+
+
+@router.get("/gigs")
+async def list_gigs(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Query gig listings from freelance platforms."""
+    db = get_db()
+
+    result = db.table("job_listings").select(
+        "id, external_id, source, title, company, location, "
+        "salary_min, salary_max, currency, tags, url, posted_at, "
+        "first_seen, last_seen, quality_score",
+    ).eq("is_active", True).in_("source", GIG_SOURCES).order("last_seen", desc=True).execute()
+
+    all_gigs = result.data
+    total = len(all_gigs)
+    offset = (page - 1) * limit
+    return {
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "listings": all_gigs[offset: offset + limit],
     }
 
 
