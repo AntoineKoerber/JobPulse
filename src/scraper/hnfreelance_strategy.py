@@ -58,8 +58,6 @@ class HNFreelanceStrategy(BaseScrapeStrategy):
 
             external_id = hashlib.md5(url.encode()).hexdigest()[:16]
             posted_at = pubdate_elem.text if pubdate_elem is not None else ""
-            salary_raw = desc_elem.text if desc_elem is not None else None
-
             return RawJobListing(
                 external_id=external_id,
                 source="hnfreelance",
@@ -69,7 +67,6 @@ class HNFreelanceStrategy(BaseScrapeStrategy):
                 tags=["tech", "contract"],
                 url=url,
                 posted_at=posted_at,
-                salary_raw=salary_raw,
             )
         except Exception as e:
             logger.warning("Failed to parse HN Jobs item: %s", e)
