@@ -14,9 +14,8 @@ from src.scraper.arbeitnow_strategy import ArbeitnowStrategy
 from src.scraper.jobicy_strategy import JobicyStrategy
 from src.scraper.weworkremotely_strategy import WeWorkRemotelyStrategy
 from src.scraper.adzuna_strategy import AdzunaStrategy
-from src.scraper.freelancer_strategy import FreelancerStrategy
-from src.scraper.guru_strategy import GuruStrategy
-from src.scraper.peopleperhour_strategy import PeoplePerHourStrategy
+from src.scraper.forhire_strategy import ForHireStrategy
+from src.scraper.hnfreelance_strategy import HNFreelanceStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +25,8 @@ STRATEGY_MAP = {
     "jobicy": JobicyStrategy,
     "weworkremotely": WeWorkRemotelyStrategy,
     "adzuna": AdzunaStrategy,
-    "freelancer": FreelancerStrategy,
-    "guru": GuruStrategy,
-    "peopleperhour": PeoplePerHourStrategy,
+    "forhire": ForHireStrategy,
+    "hnfreelance": HNFreelanceStrategy,
 }
 
 CONFIGS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "configs")

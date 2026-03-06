@@ -1,0 +1,8 @@
+{
+  "source": "hnfreelance",
+  "base_url": "https://hnrss.org/jobs",
+  "rate_limit_seconds": 2.0,
+  "request_headers": {
+    "User-Agent": "JobPulse/1.0 (portfolio demo; github.com/AntoineKoerber/JobPulse)"
+  }
+}

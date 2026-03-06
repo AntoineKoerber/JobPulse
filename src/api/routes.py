@@ -28,7 +28,7 @@ from src.analytics import insights
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
-GIG_SOURCES = ["freelancer", "guru", "peopleperhour"]
+GIG_SOURCES = ["forhire", "hnfreelance"]
 
 
 async def _run_scrape(sources: list) -> dict:
