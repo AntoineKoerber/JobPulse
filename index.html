@@ -2182,7 +2182,7 @@
       return;
     }
 
-    let f = 'is_active=eq.true&order=last_seen.desc';
+    let f = 'is_active=eq.true&source=not.in.(forhire,hnfreelance)&order=last_seen.desc';
     if (viewMode === 'saved') {
       f += `&id=in.(${[...savedIds].join(',')})`;
     }
