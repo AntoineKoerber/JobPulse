@@ -3496,6 +3496,83 @@
       applyBtnCounter++;
     }
 
+    // ── Vague input detection ──────────────────────
+    const VAGUE_ROLES = {
+      'it':        ['software engineer', 'data analyst', 'devops engineer', 'QA engineer', 'IT administrator'],
+      'tech':      ['software engineer', 'frontend developer', 'backend developer', 'data scientist'],
+      'computer':  ['software engineer', 'data engineer', 'security engineer', 'network engineer'],
+      'coding':    ['software developer', 'frontend developer', 'python developer', 'full stack developer'],
+      'programming': ['software developer', 'backend developer', 'java developer', 'web developer'],
+      'digital':   ['product manager', 'UX designer', 'frontend developer', 'data analyst'],
+      'web':       ['web developer', 'frontend developer', 'full stack developer', 'react developer'],
+      'data':      ['data scientist', 'data analyst', 'data engineer', 'analytics engineer'],
+      'cyber':     ['security engineer', 'penetration tester', 'cybersecurity engineer'],
+      'cloud':     ['cloud engineer', 'devops engineer', 'platform engineer', 'SRE'],
+      'ai':        ['AI engineer', 'ML engineer', 'data scientist', 'research engineer'],
+      'design':    ['UX designer', 'UI designer', 'product designer', 'graphic designer'],
+    };
+
+    const VAGUE_LOCATIONS = {
+      'asia':         ['Japan', 'Singapore', 'India', 'South Korea', 'Hong Kong'],
+      'europe':       ['Germany', 'Netherlands', 'UK', 'France', 'Sweden'],
+      'america':      ['USA', 'Canada', 'Brazil', 'Mexico'],
+      'north america': ['USA', 'Canada'],
+      'south america': ['Brazil', 'Argentina', 'Mexico'],
+      'africa':       ['South Africa', 'Nigeria', 'Kenya'],
+      'middle east':  ['Dubai', 'Israel', 'UAE'],
+      'oceania':      ['Australia', 'New Zealand'],
+      'nordic':       ['Sweden', 'Norway', 'Denmark', 'Finland'],
+      'eastern europe': ['Poland', 'Czech Republic', 'Romania', 'Hungary'],
+      'southeast asia': ['Singapore', 'Vietnam', 'Thailand', 'Philippines'],
+      'somewhere':    [],
+      'anywhere':     [],
+    };
+
+    function detectVagueHints(text) {
+      const lower = text.toLowerCase();
+      const parts = [];
+
+      // Check for vague roles
+      let vagueRole = null;
+      for (const [term, suggestions] of Object.entries(VAGUE_ROLES)) {
+        const re = new RegExp('\\b' + term + '\\b', 'i');
+        if (re.test(lower)) { vagueRole = { term, suggestions }; break; }
+      }
+
+      // Check for vague locations (continents / regions)
+      let vagueLoc = null;
+      for (const [term, suggestions] of Object.entries(VAGUE_LOCATIONS)) {
+        const re = new RegExp('\\b' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+        if (re.test(lower)) { vagueLoc = { term, suggestions }; break; }
+      }
+
+      if (!vagueRole && !vagueLoc) return null;
+
+      let html = '<div class="chat-bubble-msg">I can work with that, but could you be a bit more specific?</div>';
+
+      if (vagueRole) {
+        const pills = vagueRole.suggestions.map(s =>
+          `<button class="chat-suggestion-pill" data-q="${esc(s)}${vagueLoc && vagueLoc.suggestions.length ? ' in ' + vagueLoc.suggestions[0] : ''}">${esc(s)}</button>`
+        ).join('');
+        html += `<div class="chat-bubble-msg" style="margin-top:0.35rem"><strong>"${esc(vagueRole.term)}"</strong> is pretty broad — did you mean one of these?</div>`;
+        html += `<div class="chat-suggestions" style="max-width:280px;margin-top:0.35rem">${pills}</div>`;
+      }
+
+      if (vagueLoc) {
+        if (vagueLoc.suggestions.length) {
+          const locPills = vagueLoc.suggestions.map(s =>
+            `<button class="chat-suggestion-pill" data-q="${vagueRole ? esc(vagueRole.suggestions[0]) + ' in ' : ''}${esc(s)}, remote ok">${esc(s)}</button>`
+          ).join('');
+          html += `<div class="chat-bubble-msg" style="margin-top:0.35rem"><strong>"${esc(vagueLoc.term)}"</strong> covers many countries — pick a specific one:</div>`;
+          html += `<div class="chat-suggestions" style="max-width:280px;margin-top:0.35rem">${locPills}</div>`;
+        } else {
+          html += `<div class="chat-bubble-msg" style="margin-top:0.35rem">Try naming a specific country or city so I can filter properly.</div>`;
+        }
+      }
+
+      return html;
+    }
+
     async function handleSend() {
       const input = document.getElementById('chat-input');
       const text = input.value.trim();
@@ -3557,13 +3634,20 @@
       }
 
       const hasFilter = parsed.role || parsed.seniority || parsed.locations.length || parsed.salaryMin || parsed.wantsRemote || parsed.wantsHybrid || parsed.wantsOnsite;
+
+      // ── Vague input guidance ──
       if (!hasFilter) {
-        await addBotMsg(`
-          <div class="chat-bubble-msg chat-no-filter-hint">
-            I couldn't pick out specific filters from that. Try something like:<br>
-            <em>"Senior React developer in Canada, remote, 90k min"</em>
-          </div>
-        `);
+        const hints = detectVagueHints(text);
+        if (hints) {
+          await addBotMsg(hints);
+        } else {
+          await addBotMsg(`
+            <div class="chat-bubble-msg chat-no-filter-hint">
+              I couldn't pick out specific filters from that. Try something like:<br>
+              <em>"Senior React developer in Canada, remote, 90k min"</em>
+            </div>
+          `);
+        }
         return;
       }
 
