@@ -3232,19 +3232,19 @@
     }
 
     function applyParsedFilters(parsed) {
-      if (parsed.role)      document.getElementById('filter-role').value = parsed.role;
-      const locs = parsed.locations.filter(l => l !== 'remote');
-      if (locs.length)      document.getElementById('filter-location').value = locs.join(', ');
-      if (parsed.salaryMin) document.getElementById('filter-salary').value = parsed.salaryMin;
+      // Set all fields (clear if empty, so refinement removals take effect)
+      document.getElementById('filter-role').value = parsed.role || '';
+      const locs = (parsed.locations || []).filter(l => l !== 'remote');
+      document.getElementById('filter-location').value = locs.length ? locs.join(', ') : '';
+      document.getElementById('filter-salary').value = parsed.salaryMin || '';
 
-      // Work type hero buttons
-      if (parsed.wantsRemote && !parsed.wantsHybrid && !parsed.wantsOnsite) {
-        document.querySelectorAll('.work-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === 'remote'));
-        heroWorkType = 'remote';
-      } else if (parsed.wantsHybrid && !parsed.wantsRemote && !parsed.wantsOnsite) {
-        document.querySelectorAll('.work-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === 'hybrid'));
-        heroWorkType = 'hybrid';
-      }
+      // Work type hero buttons — determine which to activate
+      let wt = 'all';
+      if (parsed.wantsRemote && !parsed.wantsHybrid && !parsed.wantsOnsite) wt = 'remote';
+      else if (parsed.wantsHybrid && !parsed.wantsRemote && !parsed.wantsOnsite) wt = 'hybrid';
+      else if (parsed.wantsOnsite && !parsed.wantsRemote && !parsed.wantsHybrid) wt = 'onsite';
+      document.querySelectorAll('.work-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === wt));
+      heroWorkType = wt;
 
       page = 1;
       loadJobs();
@@ -3338,7 +3338,158 @@
       `);
     }
 
+    // ── Refinement engine ───────────────────────────
+    let activeFilters = null; // tracks what was last applied
+
+    function cloneFilters(f) {
+      return { role: f.role, seniority: f.seniority, locations: [...f.locations], wantsRemote: f.wantsRemote, wantsHybrid: f.wantsHybrid, wantsOnsite: f.wantsOnsite, salaryMin: f.salaryMin };
+    }
+
+    function isRefinement(text) {
+      if (!activeFilters) return false;
+      return /\b(remove|drop|without|no results|not enough|too few|too many|fewer|more results|broaden|widen|expand|narrow|lower|reduce|raise|increase|also|add|include|change|switch|try)\b/i.test(text);
+    }
+
+    function describeChange(label) {
+      return `<span class="parse-chip worktype" style="background:var(--red);background:rgba(239,68,68,0.1);color:#dc2626">${esc(label)}</span>`;
+    }
+
+    function parseRefinement(text, current) {
+      const lower = text.toLowerCase();
+      const refined = cloneFilters(current);
+      const changes = [];
+
+      // ── Explicit removals ──────────────────────────
+      const removePattern = /\b(?:remove|drop|clear|no|without|ditch|skip|forget)\b.*?\b(salary|pay|location|city|country|role|title|remote|hybrid|onsite|on-site|seniority)\b/i;
+      const removeMatch = lower.match(removePattern);
+      if (removeMatch) {
+        const target = removeMatch[1].toLowerCase();
+        if (target === 'salary' || target === 'pay') {
+          refined.salaryMin = null;
+          changes.push('Removed salary filter');
+        } else if (target === 'location' || target === 'city' || target === 'country') {
+          refined.locations = [];
+          changes.push('Removed location filter');
+        } else if (target === 'role' || target === 'title') {
+          refined.role = '';
+          refined.seniority = '';
+          changes.push('Removed role filter');
+        } else if (target === 'remote') {
+          refined.wantsRemote = false;
+          changes.push('Removed remote filter');
+        } else if (target === 'hybrid') {
+          refined.wantsHybrid = false;
+          changes.push('Removed hybrid filter');
+        } else if (target === 'onsite' || target === 'on-site') {
+          refined.wantsOnsite = false;
+          changes.push('Removed on-site filter');
+        } else if (target === 'seniority') {
+          refined.seniority = '';
+          if (/junior|senior|lead|mid|staff|principal/i.test(refined.role)) refined.role = '';
+          changes.push('Removed seniority filter');
+        }
+      }
+
+      // ── "also add remote/hybrid/onsite" ────────────
+      if (/\b(?:also|add|include)\b.*\bremote\b/i.test(lower)) {
+        refined.wantsRemote = true;
+        changes.push('Added remote');
+      }
+      if (/\b(?:also|add|include)\b.*\bhybrid\b/i.test(lower)) {
+        refined.wantsHybrid = true;
+        changes.push('Added hybrid');
+      }
+      if (/\b(?:also|add|include)\b.*\b(?:onsite|on-site)\b/i.test(lower)) {
+        refined.wantsOnsite = true;
+        changes.push('Added on-site');
+      }
+
+      // ── Salary adjustments: "lower salary to 50k" ──
+      const salaryAdj = text.match(/\b(?:lower|reduce|drop|set|change|raise|increase)\b.*?(?:salary|pay|min).*?(?:to\s+)?(?:[$€£]?\s*)([\d,]+)\s*(k?)/i);
+      if (salaryAdj) {
+        let val = parseFloat(salaryAdj[1].replace(/,/g, ''));
+        if (/k/i.test(salaryAdj[2])) val *= 1000;
+        if (val >= 1000 && val <= 1000000) {
+          refined.salaryMin = val;
+          changes.push(`Set salary minimum to ${(val/1000).toFixed(0)}k`);
+        }
+      }
+
+      // ── Location additions: "also in Canada" ───────
+      const addLocMatch = lower.match(/\b(?:also|add|include|try)\b.*?\b(?:in\s+)?([\w\s]+)/i);
+      if (addLocMatch && !changes.length) {
+        for (const loc of LOCATIONS) {
+          const re = new RegExp('\\b' + loc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+          if (re.test(addLocMatch[1]) && !refined.locations.includes(loc)) {
+            refined.locations.push(loc);
+            changes.push(`Added ${loc} to locations`);
+          }
+        }
+      }
+
+      // ── Location change: "change location to X" ────
+      const changeLocMatch = lower.match(/\b(?:change|switch)\b.*?\blocation\b.*?\bto\b\s+([\w\s,]+)/i);
+      if (changeLocMatch) {
+        refined.locations = [];
+        for (const loc of LOCATIONS) {
+          const re = new RegExp('\\b' + loc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+          if (re.test(changeLocMatch[1])) refined.locations.push(loc);
+        }
+        if (refined.locations.length) changes.push(`Changed location to ${refined.locations.join(', ')}`);
+      }
+
+      // ── Auto-broaden: "not enough results", "no results", "too few" ──
+      if (/\b(?:no results|not enough|too few|nothing|empty|zero|0 results|didn'?t find|couldn'?t find|no jobs|no listings)\b/i.test(lower) && !changes.length) {
+        // Priority: salary → work type restriction → location → seniority
+        if (refined.salaryMin) {
+          changes.push(`Removed salary filter (was ${(refined.salaryMin/1000).toFixed(0)}k+)`);
+          refined.salaryMin = null;
+        } else if (!refined.wantsRemote && (refined.wantsHybrid || refined.wantsOnsite)) {
+          refined.wantsRemote = true;
+          changes.push('Also including remote jobs');
+        } else if (refined.locations.length) {
+          const old = refined.locations.join(', ');
+          refined.locations = [];
+          changes.push(`Removed location filter (was ${old})`);
+        } else if (refined.seniority) {
+          changes.push(`Removed seniority filter (was ${refined.seniority})`);
+          refined.seniority = '';
+          if (/junior|senior|lead|mid|staff|principal/i.test(refined.role)) refined.role = '';
+        } else {
+          // Nothing left to broaden
+          changes.push('All filters are already as broad as possible');
+        }
+      }
+
+      // ── Auto-narrow: "too many results" ────────────
+      if (/\b(?:too many|too broad|narrow|more specific|fewer results)\b/i.test(lower) && !changes.length) {
+        if (!refined.wantsRemote && !refined.wantsHybrid && !refined.wantsOnsite) {
+          refined.wantsRemote = true;
+          changes.push('Narrowed to remote jobs only');
+        } else if (!refined.salaryMin) {
+          refined.salaryMin = 50000;
+          changes.push('Added 50k minimum salary');
+        } else {
+          changes.push('Try specifying a location or seniority level to narrow results');
+        }
+      }
+
+      return { refined, changes };
+    }
+
     let pendingParsed = null;
+
+    function attachApplyBtn() {
+      const applyBtn = document.getElementById('chat-apply-btn');
+      if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+          activeFilters = cloneFilters(pendingParsed);
+          applyParsedFilters(pendingParsed);
+          document.getElementById('chat-panel').classList.remove('open');
+        });
+      }
+    }
+
     async function handleSend() {
       const input = document.getElementById('chat-input');
       const text = input.value.trim();
@@ -3347,6 +3498,31 @@
       input.style.height = '';
       addUserMsg(text);
 
+      // ── Check if this is a refinement of previous search ──
+      if (isRefinement(text) && activeFilters) {
+        const { refined, changes } = parseRefinement(text, activeFilters);
+
+        if (!changes.length) {
+          await addBotMsg(`<div class="chat-bubble-msg chat-no-filter-hint">I wasn't sure what to change. Try something like <em>"remove the salary filter"</em> or <em>"also include remote"</em>.</div>`);
+          return;
+        }
+
+        const allBroad = changes.includes('All filters are already as broad as possible');
+        const changeBadges = changes.map(c => describeChange(c)).join(' ');
+
+        pendingParsed = refined;
+        const card = buildParseCard(refined);
+        await addBotMsg(`
+          <div class="chat-bubble-msg">${allBroad ? "Your search is already wide open — try a different role or location instead." : "Got it, here's the updated search:"}</div>
+          ${!allBroad ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin:0.25rem 0;max-width:280px">${changeBadges}</div>` : ''}
+          ${!allBroad && card ? card : ''}
+        `);
+
+        if (!allBroad) attachApplyBtn();
+        return;
+      }
+
+      // ── New search ──
       const parsed = parseJobQuery(text);
 
       if (parsed.isNonTech) {
@@ -3375,14 +3551,7 @@
       pendingParsed = parsed;
       const card = buildParseCard(parsed);
       await addBotMsg(`<div class="chat-bubble-msg">Here's what I found:</div>${card}`);
-
-      const applyBtn = document.getElementById('chat-apply-btn');
-      if (applyBtn) {
-        applyBtn.addEventListener('click', () => {
-          applyParsedFilters(pendingParsed);
-          document.getElementById('chat-panel').classList.remove('open');
-        });
-      }
+      attachApplyBtn();
     }
 
     // Open / close
