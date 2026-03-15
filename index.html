@@ -1440,6 +1440,319 @@
       .filters-sidebar { flex-direction: column; gap: 1.5rem; }
       .filter-box { min-width: 0; }
     }
+
+    /* ── Smart Job Search Chat ──────────────────────── */
+    .chat-float {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 9999;
+    }
+    .chat-bubble-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 30px rgba(80,70,229,0.4);
+      transition: all 0.3s var(--ease-bounce);
+      position: relative;
+    }
+    .chat-bubble-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 12px 40px rgba(80,70,229,0.55);
+    }
+    .chat-bubble-btn svg {
+      width: 24px;
+      height: 24px;
+      color: white;
+      transition: transform 0.3s var(--ease-bounce);
+    }
+    .chat-bubble-btn:hover svg { transform: rotate(15deg) scale(1.1); }
+    .chat-attention-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 16px;
+      height: 16px;
+      background: #ef4444;
+      border-radius: 50%;
+      border: 2px solid white;
+      display: none;
+    }
+    .chat-attention-badge.pulse-dot {
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .chat-panel {
+      position: fixed;
+      bottom: 5.5rem;
+      right: 2rem;
+      width: 380px;
+      max-height: 560px;
+      background: var(--bg-surface);
+      border-radius: var(--radius);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 0 0 1px var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 9998;
+      overflow: hidden;
+      transform: translateY(20px) scale(0.97);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s var(--ease-bounce);
+    }
+    .chat-panel.open {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      pointer-events: all;
+    }
+    .chat-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 1.25rem;
+      background: linear-gradient(135deg, var(--accent) 0%, #818cf8 100%);
+      color: white;
+      flex-shrink: 0;
+    }
+    .chat-header-icon {
+      width: 36px;
+      height: 36px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .chat-header-icon svg { width: 18px; height: 18px; color: white; }
+    .chat-header-text { flex: 1; }
+    .chat-header-title { font-size: 0.9rem; font-weight: 600; letter-spacing: -0.01em; }
+    .chat-header-sub { font-size: 0.72rem; opacity: 0.8; margin-top: 1px; }
+    .chat-close-btn {
+      width: 28px;
+      height: 28px;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+    .chat-close-btn:hover { background: rgba(255,255,255,0.3); }
+    .chat-close-btn svg { width: 14px; height: 14px; }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-height: 0;
+    }
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .chat-msg {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-start;
+      animation: fadeUp 0.3s ease;
+    }
+    .chat-msg.user { flex-direction: row-reverse; }
+    .chat-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #818cf8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .chat-avatar svg { width: 14px; height: 14px; color: white; }
+    .chat-bubble-msg {
+      max-width: 280px;
+      padding: 0.65rem 0.9rem;
+      border-radius: 16px;
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+    .chat-msg.bot .chat-bubble-msg {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      border-bottom-left-radius: 4px;
+    }
+    .chat-msg.user .chat-bubble-msg {
+      background: var(--accent);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+    .chat-suggestion-pill {
+      padding: 0.35rem 0.75rem;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s var(--ease-smooth);
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .chat-suggestion-pill:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-glow);
+    }
+    .parse-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+      margin-top: 0.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-width: 280px;
+    }
+    .parse-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .parse-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      min-width: 52px;
+    }
+    .parse-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.55rem;
+      border-radius: 100px;
+      font-size: 0.72rem;
+      font-weight: 500;
+    }
+    .parse-chip.role   { background: var(--accent-glow); color: var(--accent); }
+    .parse-chip.location { background: var(--cyan-glow); color: var(--cyan); }
+    .parse-chip.salary { background: var(--green-glow); color: var(--green); }
+    .parse-chip.worktype { background: var(--orange-glow); color: var(--orange); }
+    .chat-apply-btn {
+      width: 100%;
+      margin-top: 0.25rem;
+      padding: 0.6rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s var(--ease-smooth);
+      letter-spacing: -0.01em;
+    }
+    .chat-apply-btn:hover {
+      background: var(--accent-light);
+      transform: translateY(-1px);
+    }
+    .chat-non-tech {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+      font-size: 0.78rem;
+      color: #92400e;
+      line-height: 1.55;
+      max-width: 280px;
+      margin-top: 0.25rem;
+    }
+    .chat-non-tech strong { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+    .chat-input-area {
+      padding: 0.75rem 1rem;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-end;
+      background: var(--bg-surface);
+      flex-shrink: 0;
+    }
+    .chat-textarea {
+      flex: 1;
+      resize: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.75rem;
+      font-family: inherit;
+      font-size: 0.82rem;
+      color: var(--text-primary);
+      background: var(--bg-elevated);
+      outline: none;
+      max-height: 100px;
+      min-height: 38px;
+      line-height: 1.5;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .chat-textarea:focus { border-color: var(--accent); background: white; }
+    .chat-textarea::placeholder { color: var(--text-tertiary); }
+    .chat-send-btn {
+      width: 38px;
+      height: 38px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s var(--ease-smooth);
+    }
+    .chat-send-btn:hover { background: var(--accent-light); transform: scale(1.05); }
+    .chat-send-btn svg { width: 16px; height: 16px; color: white; }
+    .chat-typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0.65rem 0.9rem;
+      background: var(--bg-elevated);
+      border-radius: 16px;
+      border-bottom-left-radius: 4px;
+      width: fit-content;
+    }
+    .chat-typing-indicator span {
+      width: 6px;
+      height: 6px;
+      background: var(--text-tertiary);
+      border-radius: 50%;
+      animation: pulse 1s ease-in-out infinite;
+    }
+    .chat-typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
+    .chat-typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
+    .chat-no-filter-hint { font-style: italic; color: var(--text-secondary); }
+    @media (max-width: 500px) {
+      .chat-panel { width: calc(100vw - 2rem); right: 1rem; bottom: 5rem; }
+      .chat-float { bottom: 1.5rem; right: 1rem; }
+    }
   </style>
 </head>
 <body>
@@ -2757,7 +3070,369 @@
       });
     });
   })();
+
+  // ── Smart Job Search Chat ─────────────────────────
+  (function() {
+    const TECH_ROLES = [
+      'software engineer','software developer','web developer','frontend developer','backend developer',
+      'full stack developer','fullstack developer','full-stack developer','frontend','backend','fullstack',
+      'full stack','developer','programmer','devops engineer','devops','sre','site reliability engineer',
+      'platform engineer','cloud engineer','data engineer','data scientist','data analyst',
+      'machine learning engineer','ml engineer','ai engineer','artificial intelligence engineer',
+      'mobile developer','ios developer','android developer','react native developer','flutter developer',
+      'ui designer','ux designer','product designer','ui/ux designer','graphic designer',
+      'product manager','product owner','scrum master','agile coach','program manager',
+      'qa engineer','test engineer','quality assurance engineer','automation engineer','test automation',
+      'security engineer','infosec engineer','cybersecurity engineer','penetration tester',
+      'blockchain developer','smart contract developer','solidity developer',
+      'network engineer','systems administrator','sysadmin','it administrator','it engineer',
+      'tech lead','engineering manager','cto','vp of engineering','head of engineering',
+      'technical writer','developer advocate','solutions architect','solutions engineer',
+      'database administrator','dba','analytics engineer','bi engineer','data warehouse engineer',
+      'game developer','unity developer','unreal engine developer','embedded engineer','firmware engineer',
+      'research engineer','research scientist','nlp engineer','computer vision engineer',
+      'support engineer','technical support engineer','python developer','javascript developer',
+      'java developer','typescript developer','go developer','rust developer','ruby developer',
+      'php developer','react developer','angular developer','vue developer','node.js developer',
+    ];
+
+    const NON_TECH_ROLES = [
+      'nurse','doctor','physician','surgeon','dentist','pharmacist','therapist','psychologist',
+      'veterinarian','paramedic','radiologist','midwife','optometrist',
+      'teacher','professor','lecturer','educator','tutor',
+      'chef','cook','baker','barista','waiter','waitress','server','bartender','sommelier',
+      'driver','truck driver','delivery driver','pilot','flight attendant','captain',
+      'lawyer','attorney','paralegal','judge','notary','solicitor','barrister',
+      'accountant','bookkeeper','auditor','tax advisor','actuary',
+      'carpenter','plumber','electrician','mechanic','welder','painter','bricklayer',
+      'farmer','gardener','landscaper','agricultural worker',
+      'police officer','firefighter','soldier','military officer','security guard',
+      'journalist','reporter','news anchor','broadcaster',
+      'social worker','counselor','case manager','care worker',
+      'real estate agent','realtor','insurance agent','mortgage broker','loan officer',
+      'photographer','videographer','filmmaker','cinematographer',
+      'makeup artist','hairdresser','cosmetologist','tattoo artist','stylist',
+      'personal trainer','yoga instructor','fitness coach','nutritionist','dietitian',
+      'retail assistant','cashier','store manager','merchandiser','shelf stacker',
+      'cleaner','janitor','housekeeper','maid',
+      'athlete','sports coach','referee','physiotherapist',
+    ];
+
+    const LOCATIONS = [
+      'australia','germany','france','united kingdom','uk','england','scotland','wales',
+      'usa','united states','us','canada','netherlands','switzerland','singapore',
+      'india','spain','portugal','italy','austria','sweden','norway','denmark','finland',
+      'belgium','poland','czech republic','hungary','romania','ukraine','new zealand',
+      'japan','south korea','china','brazil','argentina','mexico','south africa',
+      'ireland','dubai','uae','israel','turkey','greece','estonia','latvia','lithuania',
+      'sydney','melbourne','brisbane','perth','auckland','christchurch',
+      'london','berlin','hamburg','munich','paris','amsterdam','rotterdam','zurich','geneva',
+      'toronto','vancouver','montreal','calgary','new york','san francisco','los angeles',
+      'seattle','austin','boston','chicago','denver','miami','atlanta',
+      'bangalore','mumbai','delhi','hyderabad','pune','chennai',
+      'singapore','hong kong','tokyo','osaka','seoul','taipei',
+      'madrid','barcelona','lisbon','rome','milan','florence','vienna','brussels','warsaw',
+      'cape town','johannesburg','nairobi','lagos','accra',
+      'dubai','abu dhabi','tel aviv','istanbul','prague','budapest','bucharest',
+    ];
+
+    function parseJobQuery(text) {
+      const lower = text.toLowerCase();
+
+      // Non-tech detection
+      let nonTechMatch = null;
+      for (const nt of NON_TECH_ROLES) {
+        const re = new RegExp('\\b' + nt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+        if (re.test(lower)) { nonTechMatch = nt; break; }
+      }
+
+      // Role extraction — exact match first
+      let role = '';
+      for (const tr of TECH_ROLES) {
+        if (lower.includes(tr)) { role = tr; break; }
+      }
+      // Fallback: "as a/an X" or "for a/an X" pattern
+      if (!role && !nonTechMatch) {
+        const m = text.match(/(?:as\s+an?\s+|for\s+an?\s+|position\s+(?:of\s+)?|role\s+(?:as\s+an?\s+)?)([A-Za-z][A-Za-z\s\-\/]+?)(?=\s+(?:in\b|at\b|with\b|,|\.|$))/i);
+        if (m) role = m[1].trim().toLowerCase();
+      }
+
+      // Seniority
+      const sm = lower.match(/\b(junior|jr\.?|senior|sr\.?|mid[- ]?level|entry[- ]?level|lead|principal|staff)\b/);
+      let seniority = '';
+      if (sm) {
+        if (/^jr|junior/i.test(sm[1])) seniority = 'junior';
+        else if (/^sr|senior/i.test(sm[1])) seniority = 'senior';
+        else seniority = sm[1].replace(/[-\s]/g, '').toLowerCase();
+      }
+      if (!role && seniority) role = seniority;
+
+      // Locations
+      const locations = [];
+      for (const loc of LOCATIONS) {
+        const re = new RegExp('\\b' + loc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+        if (re.test(lower) && !locations.includes(loc)) locations.push(loc);
+      }
+
+      // Work type
+      const wantsRemote = /\bremote\b|\bwork from home\b|\bwfh\b|\banywhere\b/.test(lower);
+      const wantsHybrid = /\bhybrid\b/.test(lower);
+      const wantsOnsite = /\bonsite\b|\bon[- ]site\b|\bin[- ]?office\b|\boffice[- ]based\b/.test(lower);
+
+      // Salary — look for explicit minimum first
+      let salaryMin = null;
+      const minMatch = text.match(/(?:minimum\s+(?:salary\s+)?(?:of\s+)?|at\s+least\s+|min[\s.:]+)(?:[$€£]?\s*)([\d,]+)\s*(k?)/i);
+      if (minMatch) {
+        let val = parseFloat(minMatch[1].replace(/,/g, ''));
+        if (/k/i.test(minMatch[2])) val *= 1000;
+        if (val >= 10000 && val <= 1000000) salaryMin = val;
+      }
+      // Then scan for any "NNk" or large number if no min found
+      if (!salaryMin) {
+        const nums = [];
+        const re = /(?:[$€£]?\s*)([\d]+(?:[,]\d{3})*(?:\.\d+)?)\s*(k)\b/gi;
+        let m;
+        while ((m = re.exec(lower)) !== null) {
+          const val = parseFloat(m[1].replace(/,/g, '')) * 1000;
+          if (val >= 10000 && val <= 1000000) nums.push(val);
+        }
+        if (nums.length) salaryMin = Math.min(...nums);
+      }
+
+      return { role, seniority, locations, wantsRemote, wantsHybrid, wantsOnsite, salaryMin, isNonTech: !!nonTechMatch, nonTechMatch };
+    }
+
+    function applyParsedFilters(parsed) {
+      if (parsed.role)      document.getElementById('filter-role').value = parsed.role;
+      const locs = parsed.locations.filter(l => l !== 'remote');
+      if (locs.length)      document.getElementById('filter-location').value = locs.join(', ');
+      if (parsed.salaryMin) document.getElementById('filter-salary').value = parsed.salaryMin;
+
+      // Work type hero buttons
+      if (parsed.wantsRemote && !parsed.wantsHybrid && !parsed.wantsOnsite) {
+        document.querySelectorAll('.work-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === 'remote'));
+        heroWorkType = 'remote';
+      } else if (parsed.wantsHybrid && !parsed.wantsRemote && !parsed.wantsOnsite) {
+        document.querySelectorAll('.work-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === 'hybrid'));
+        heroWorkType = 'hybrid';
+      }
+
+      page = 1;
+      loadJobs();
+      updateAlertBannerVisibility();
+
+      // Switch to jobs view
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('jobs-view').classList.add('active');
+      document.getElementById('nav-jobs').classList.add('active');
+      document.getElementById('nav-analytics').classList.remove('active');
+      setTimeout(() => document.getElementById('listings').scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+    }
+
+    const messagesEl = document.getElementById('chat-messages');
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function addUserMsg(text) {
+      const div = document.createElement('div');
+      div.className = 'chat-msg user';
+      div.innerHTML = `<div class="chat-bubble-msg">${esc(text)}</div>`;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function addBotMsg(innerHtml) {
+      return new Promise(resolve => {
+        // Typing indicator
+        const typing = document.createElement('div');
+        typing.className = 'chat-msg bot';
+        typing.innerHTML = `
+          <div class="chat-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></div>
+          <div class="chat-typing-indicator"><span></span><span></span><span></span></div>
+        `;
+        messagesEl.appendChild(typing);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+
+        setTimeout(() => {
+          typing.remove();
+          const div = document.createElement('div');
+          div.className = 'chat-msg bot';
+          div.innerHTML = `
+            <div class="chat-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></div>
+            <div>${innerHtml}</div>
+          `;
+          messagesEl.appendChild(div);
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+          resolve(div);
+        }, 550 + Math.random() * 250);
+      });
+    }
+
+    function buildParseCard(parsed) {
+      const rows = [];
+      if (parsed.role || parsed.seniority) {
+        const label = [parsed.seniority, parsed.role]
+          .filter(Boolean)
+          .map(r => r.charAt(0).toUpperCase() + r.slice(1))
+          .join(' ');
+        rows.push(`<div class="parse-row"><span class="parse-label">Role</span><span class="parse-chip role">${esc(label)}</span></div>`);
+      }
+      if (parsed.locations.length) {
+        const chips = parsed.locations.map(l => `<span class="parse-chip location">${esc(l.charAt(0).toUpperCase() + l.slice(1))}</span>`).join('');
+        rows.push(`<div class="parse-row"><span class="parse-label">Location</span>${chips}</div>`);
+      }
+      const wt = [];
+      if (parsed.wantsRemote) wt.push('<span class="parse-chip worktype">Remote</span>');
+      if (parsed.wantsHybrid) wt.push('<span class="parse-chip worktype">Hybrid</span>');
+      if (parsed.wantsOnsite) wt.push('<span class="parse-chip worktype">On-site</span>');
+      if (wt.length) rows.push(`<div class="parse-row"><span class="parse-label">Type</span>${wt.join('')}</div>`);
+      if (parsed.salaryMin) {
+        const fmt = `${(parsed.salaryMin / 1000).toFixed(0)}k+`;
+        rows.push(`<div class="parse-row"><span class="parse-label">Salary</span><span class="parse-chip salary">${fmt}</span></div>`);
+      }
+      if (!rows.length) return null;
+      return `<div class="parse-card">${rows.join('')}<button class="chat-apply-btn" id="chat-apply-btn">Apply to Search &rarr;</button></div>`;
+    }
+
+    function initWelcome() {
+      messagesEl.innerHTML = '';
+      addBotMsg(`
+        <div class="chat-bubble-msg">
+          Hi! Tell me what you're looking for and I'll set up your filters instantly.
+        </div>
+        <div class="chat-suggestions" style="max-width:280px;margin-top:0.5rem">
+          <button class="chat-suggestion-pill" data-q="Junior software engineer in Germany, remote ok, 60k min">Junior SWE · Germany</button>
+          <button class="chat-suggestion-pill" data-q="Senior frontend developer, fully remote, minimum salary 90k">Senior Frontend · Remote</button>
+          <button class="chat-suggestion-pill" data-q="Data scientist in Australia or remote, 80k minimum">Data Scientist · AU</button>
+          <button class="chat-suggestion-pill" data-q="DevOps engineer in the UK, hybrid, 75k">DevOps · UK Hybrid</button>
+        </div>
+      `);
+    }
+
+    let pendingParsed = null;
+    async function handleSend() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      input.style.height = '';
+      addUserMsg(text);
+
+      const parsed = parseJobQuery(text);
+
+      if (parsed.isNonTech) {
+        await addBotMsg(`
+          <div class="chat-bubble-msg">This one's outside our lane — JobPulse focuses on tech roles.</div>
+          <div class="chat-non-tech">
+            <strong>Better platforms for "${esc(parsed.nonTechMatch)}" roles:</strong>
+            Indeed, LinkedIn Jobs, Glassdoor, or industry-specific boards will serve you better here.
+            We cover software engineering, data, DevOps, design, product, and related tech roles.
+          </div>
+        `);
+        return;
+      }
+
+      const hasFilter = parsed.role || parsed.seniority || parsed.locations.length || parsed.salaryMin || parsed.wantsRemote || parsed.wantsHybrid || parsed.wantsOnsite;
+      if (!hasFilter) {
+        await addBotMsg(`
+          <div class="chat-bubble-msg chat-no-filter-hint">
+            I couldn't pick out specific filters from that. Try something like:<br>
+            <em>"Senior React developer in Canada, remote, 90k min"</em>
+          </div>
+        `);
+        return;
+      }
+
+      pendingParsed = parsed;
+      const card = buildParseCard(parsed);
+      await addBotMsg(`<div class="chat-bubble-msg">Here's what I found:</div>${card}`);
+
+      const applyBtn = document.getElementById('chat-apply-btn');
+      if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+          applyParsedFilters(pendingParsed);
+          document.getElementById('chat-panel').classList.remove('open');
+        });
+      }
+    }
+
+    // Open / close
+    document.getElementById('chat-bubble-btn').addEventListener('click', () => {
+      const panel = document.getElementById('chat-panel');
+      if (!panel.classList.contains('open')) {
+        panel.classList.add('open');
+        document.getElementById('chat-attention-badge').style.display = 'none';
+        if (!messagesEl.hasChildNodes()) initWelcome();
+        setTimeout(() => document.getElementById('chat-input').focus(), 320);
+      } else {
+        panel.classList.remove('open');
+      }
+    });
+
+    document.getElementById('chat-close-btn').addEventListener('click', () => {
+      document.getElementById('chat-panel').classList.remove('open');
+    });
+
+    document.getElementById('chat-send-btn').addEventListener('click', handleSend);
+
+    document.getElementById('chat-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+    });
+
+    document.getElementById('chat-input').addEventListener('input', function() {
+      this.style.height = '';
+      this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+    });
+
+    // Suggestion pill clicks (delegated)
+    messagesEl.addEventListener('click', e => {
+      const pill = e.target.closest('.chat-suggestion-pill');
+      if (pill) {
+        document.getElementById('chat-input').value = pill.dataset.q;
+        handleSend();
+      }
+    });
+
+    // Show attention badge after 3s to draw first-time visitor attention
+    setTimeout(() => {
+      if (!document.getElementById('chat-panel').classList.contains('open')) {
+        const badge = document.getElementById('chat-attention-badge');
+        badge.style.display = 'block';
+        badge.classList.add('pulse-dot');
+      }
+    }, 3000);
+  })();
+
 })();
 </script>
+
+<!-- ── Smart Job Search Chat ──────────────────────────── -->
+<div class="chat-float">
+  <button class="chat-bubble-btn" id="chat-bubble-btn" aria-label="Smart job search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+    <span class="chat-attention-badge" id="chat-attention-badge"></span>
+  </button>
+  <div class="chat-panel" id="chat-panel">
+    <div class="chat-panel-header">
+      <div class="chat-header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+      </div>
+      <div class="chat-header-text">
+        <div class="chat-header-title">Smart Job Search</div>
+        <div class="chat-header-sub">Describe your ideal role in plain English</div>
+      </div>
+      <button class="chat-close-btn" id="chat-close-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-area">
+      <textarea class="chat-textarea" id="chat-input" placeholder="e.g. Junior backend engineer in Germany, remote ok, 70k min" rows="1"></textarea>
+      <button class="chat-send-btn" id="chat-send-btn" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
