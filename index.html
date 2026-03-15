@@ -2023,6 +2023,35 @@
   </div>
 </footer>
 
+<!-- ── Smart Job Search Chat ──────────────────────────── -->
+<div class="chat-float">
+  <button class="chat-bubble-btn" id="chat-bubble-btn" aria-label="Smart job search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+    <span class="chat-attention-badge" id="chat-attention-badge"></span>
+  </button>
+  <div class="chat-panel" id="chat-panel">
+    <div class="chat-panel-header">
+      <div class="chat-header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+      </div>
+      <div class="chat-header-text">
+        <div class="chat-header-title">Smart Job Search</div>
+        <div class="chat-header-sub">Describe your ideal role in plain English</div>
+      </div>
+      <button class="chat-close-btn" id="chat-close-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-area">
+      <textarea class="chat-textarea" id="chat-input" placeholder="e.g. Junior backend engineer in Germany, remote ok, 70k min" rows="1"></textarea>
+      <button class="chat-send-btn" id="chat-send-btn" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 (() => {
   'use strict';
@@ -3405,34 +3434,5 @@
 
 })();
 </script>
-
-<!-- ── Smart Job Search Chat ──────────────────────────── -->
-<div class="chat-float">
-  <button class="chat-bubble-btn" id="chat-bubble-btn" aria-label="Smart job search">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-    <span class="chat-attention-badge" id="chat-attention-badge"></span>
-  </button>
-  <div class="chat-panel" id="chat-panel">
-    <div class="chat-panel-header">
-      <div class="chat-header-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-      </div>
-      <div class="chat-header-text">
-        <div class="chat-header-title">Smart Job Search</div>
-        <div class="chat-header-sub">Describe your ideal role in plain English</div>
-      </div>
-      <button class="chat-close-btn" id="chat-close-btn" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="chat-messages" id="chat-messages"></div>
-    <div class="chat-input-area">
-      <textarea class="chat-textarea" id="chat-input" placeholder="e.g. Junior backend engineer in Germany, remote ok, 70k min" rows="1"></textarea>
-      <button class="chat-send-btn" id="chat-send-btn" aria-label="Send">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-      </button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
