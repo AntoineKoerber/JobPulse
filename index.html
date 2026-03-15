@@ -3345,9 +3345,8 @@
       return { role: f.role, seniority: f.seniority, locations: [...f.locations], wantsRemote: f.wantsRemote, wantsHybrid: f.wantsHybrid, wantsOnsite: f.wantsOnsite, salaryMin: f.salaryMin };
     }
 
-    function isRefinement(text) {
-      if (!activeFilters) return false;
-      return /\b(remove|drop|without|no results|not enough|too few|too many|fewer|more results|broaden|widen|expand|narrow|lower|reduce|raise|increase|also|add|include|change|switch|try)\b/i.test(text);
+    function looksLikeRefinement(text) {
+      return /\b(remove|drop|without|no results|not enough|too few|too many|fewer|more results|broaden|widen|expand|narrow|lower|reduce|raise|increase|also|add|include|change|switch|try|didn.?t find|couldn.?t find|found nothing|no luck|no jobs|no listings|nothing came|nothing showed|0 results|zero results|empty|still no|show more|open it up)\b/i.test(text);
     }
 
     function describeChange(label) {
@@ -3439,7 +3438,7 @@
       }
 
       // ── Auto-broaden: "not enough results", "no results", "too few" ──
-      if (/\b(?:no results|not enough|too few|nothing|empty|zero|0 results|didn'?t find|couldn'?t find|no jobs|no listings)\b/i.test(lower) && !changes.length) {
+      if (/(?:no results|not enough|too few|nothing|empty|zero|0 results|didn.?t find|couldn.?t find|no jobs|no listings|found nothing|no luck|still no|nothing came|nothing show)/i.test(lower) && !changes.length) {
         // Priority: salary → work type restriction → location → seniority
         if (refined.salaryMin) {
           changes.push(`Removed salary filter (was ${(refined.salaryMin/1000).toFixed(0)}k+)`);
@@ -3479,15 +3478,22 @@
 
     let pendingParsed = null;
 
+    // Unique ID counter so each apply button gets its own listener
+    let applyBtnCounter = 0;
+
     function attachApplyBtn() {
-      const applyBtn = document.getElementById('chat-apply-btn');
+      const btnId = 'chat-apply-btn-' + applyBtnCounter;
+      // Rename the button we just inserted so getElementById works
+      const generic = document.getElementById('chat-apply-btn');
+      if (generic) generic.id = btnId;
+      const applyBtn = document.getElementById(btnId);
       if (applyBtn) {
         applyBtn.addEventListener('click', () => {
-          activeFilters = cloneFilters(pendingParsed);
           applyParsedFilters(pendingParsed);
           document.getElementById('chat-panel').classList.remove('open');
         });
       }
+      applyBtnCounter++;
     }
 
     async function handleSend() {
@@ -3499,7 +3505,7 @@
       addUserMsg(text);
 
       // ── Check if this is a refinement of previous search ──
-      if (isRefinement(text) && activeFilters) {
+      if (looksLikeRefinement(text) && activeFilters) {
         const { refined, changes } = parseRefinement(text, activeFilters);
 
         if (!changes.length) {
@@ -3511,6 +3517,7 @@
         const changeBadges = changes.map(c => describeChange(c)).join(' ');
 
         pendingParsed = refined;
+        activeFilters = cloneFilters(refined);
         const card = buildParseCard(refined);
         await addBotMsg(`
           <div class="chat-bubble-msg">${allBroad ? "Your search is already wide open — try a different role or location instead." : "Got it, here's the updated search:"}</div>
@@ -3519,6 +3526,18 @@
         `);
 
         if (!allBroad) attachApplyBtn();
+        return;
+      }
+
+      // ── Refinement words but no active search yet ──
+      if (looksLikeRefinement(text) && !activeFilters) {
+        await addBotMsg(`
+          <div class="chat-bubble-msg chat-no-filter-hint">
+            I don't have a previous search to refine yet. Start with something like:<br>
+            <em>"Frontend developer in Germany, remote, 60k min"</em><br>
+            Then I can help you adjust from there.
+          </div>
+        `);
         return;
       }
 
@@ -3548,7 +3567,9 @@
         return;
       }
 
+      // Set activeFilters immediately so refinements work right away
       pendingParsed = parsed;
+      activeFilters = cloneFilters(parsed);
       const card = buildParseCard(parsed);
       await addBotMsg(`<div class="chat-bubble-msg">Here's what I found:</div>${card}`);
       attachApplyBtn();
