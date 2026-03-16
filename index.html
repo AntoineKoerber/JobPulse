@@ -3127,8 +3127,6 @@
     ];
 
     // Build a Set of individual role words for typo correction
-    const ROLE_WORDS = new Set();
-    TECH_ROLES.forEach(r => r.split(/\s+/).forEach(w => { if (w.length > 3) ROLE_WORDS.add(w); }));
 
     const NON_TECH_ROLES = [
       'nurse','doctor','physician','surgeon','dentist','pharmacist','therapist','psychologist',
@@ -3170,19 +3168,11 @@
       'dubai','abu dhabi','tel aviv','istanbul','prague','budapest','bucharest',
     ];
 
-    // ── Abbreviation & Synonym Expansion ────────────
-    const ABBREV = {
-      'swe':'software engineer','fe':'frontend developer',
-      'fs':'full stack developer','dev':'developer','devops':'devops engineer',
-      'sre':'site reliability engineer','pm':'product manager','po':'product owner',
-      'qa':'qa engineer','ml':'machine learning engineer','ds':'data scientist',
-      'da':'data analyst','em':'engineering manager','tl':'tech lead',
-      'dba':'database administrator','ux':'ux designer','ui':'ui designer',
-      'js':'javascript','ts':'typescript','py':'python','k8s':'kubernetes',
-      'tf':'terraform','gcp':'google cloud','aws':'amazon web services',
-      'nyc':'new york','sf':'san francisco','la':'los angeles','dc':'washington',
-      'hk':'hong kong','sg':'singapore','nz':'new zealand','aus':'australia',
-      'wfh':'remote','work from home':'remote',
+    // ── Synonym Expansion (minimal, safe only) ──────
+    const SYNONYMS = {
+      'work from home':'remote',
+      'on site':'onsite',
+      'on-site':'onsite',
     };
 
     const TECHNOLOGIES = new Set([
@@ -3259,22 +3249,12 @@
       let s = text.toLowerCase().trim();
       // Strip filler phrases
       s = s.replace(/\b(i'm looking for|i am looking for|looking for|i want|i need|find me|show me|can you find|please|get me|search for|i'd like)\b/gi, ' ');
-      // Expand abbreviations (word-boundary)
-      for (const [abbr, full] of Object.entries(ABBREV)) {
-        const re = new RegExp('\\b' + abbr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+      // Expand safe synonyms only
+      for (const [syn, full] of Object.entries(SYNONYMS)) {
+        const re = new RegExp(syn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
         s = s.replace(re, full);
       }
-      // Simple typo correction: for tokens > 4 chars, try dropping one char
-      const tokens = s.split(/\s+/);
-      const corrected = tokens.map(t => {
-        if (t.length <= 4 || ROLE_WORDS.has(t)) return t;
-        for (let i = 0; i < t.length; i++) {
-          const attempt = t.slice(0, i) + t.slice(i + 1);
-          if (ROLE_WORDS.has(attempt)) return attempt;
-        }
-        return t;
-      });
-      return corrected.join(' ').replace(/\s+/g, ' ').trim();
+      return s.replace(/\s+/g, ' ').trim();
     }
 
     // ── Stage 2: Classify Intent ────────────────────
@@ -3287,8 +3267,17 @@
       if (/\b(what sources|which sources|where.+from|how does|how do you|what can you|what do you|help me|how.+work|what.+track|which boards)\b/i.test(lower) || (lower.endsWith('?') && lower.length < 60)) return 'question';
       // Bare value: short answer when bot asked a question
       if (state.lastBotQuestion && t.length < 40 && !/\b(remove|drop|without|not enough|no results|also|add|include|change)\b/i.test(lower)) return 'bare_value';
-      // Refinement
-      if (state.filters && /\b(remove|drop|without|no results|not enough|too few|too many|fewer|more results|broaden|widen|expand|narrow|lower|reduce|raise|increase|also|add|include|change|switch|try|didn.?t find|couldn.?t find|found nothing|no luck|no jobs|no listings|nothing came|nothing show|0 results|zero results|empty|still no|show more|open it up|minimum\s+salary|salary\s+should|set\s+salary|salary\s+to|min\s+should|minimum\s+should|salary\s+at\s+least|make\s+salary|update\s+salary|adjust\s+salary)\b/i.test(lower)) return 'refine';
+
+      // Refinement — if filters exist, check for modification language
+      if (state.filters) {
+        // Explicit refinement keywords
+        if (/\b(remove|drop|without|no results|not enough|too few|too many|fewer|more results|broaden|widen|expand|narrow|lower|reduce|raise|increase|also|add|include|change|switch|make\s+it|didn.?t find|couldn.?t find|found nothing|no luck|no jobs|no listings|nothing came|nothing show|0 results|zero results|empty|still no|show more|open it up)\b/i.test(lower)) return 'refine';
+        // Salary modification: "minimum salary should be 55", "salary to 60k", "min 50k", "set salary", etc.
+        if (/\b(salary|pay|min(?:imum)?)\b.*\b(should|to|at\s+least|be|set|update|adjust)\b/i.test(lower)) return 'refine';
+        if (/\b(set|update|adjust|make)\b.*\b(salary|pay|min(?:imum)?|remote|hybrid|onsite|location)\b/i.test(lower)) return 'refine';
+        // Work type modification: "make it remote", "switch to hybrid", "I want remote"
+        if (/\b(remote|hybrid|onsite)\b/i.test(lower) && !/\b(engineer|developer|manager|designer|analyst|scientist|architect|admin|lead)\b/i.test(lower) && t.split(/\s+/).length <= 8) return 'refine';
+      }
       return 'search';
     }
 
@@ -3611,9 +3600,22 @@
         else if (target === 'seniority') { refined.seniority = ''; if (/junior|senior|lead|mid|staff|principal/i.test(refined.role)) refined.role = ''; changes.push('Removed seniority filter'); }
       }
 
-      if (/\b(?:also|add|include)\b.*\bremote\b/i.test(lower)) { refined.wantsRemote = true; changes.push('Added remote'); }
-      if (/\b(?:also|add|include)\b.*\bhybrid\b/i.test(lower)) { refined.wantsHybrid = true; changes.push('Added hybrid'); }
-      if (/\b(?:also|add|include)\b.*\b(?:onsite|on-site)\b/i.test(lower)) { refined.wantsOnsite = true; changes.push('Added on-site'); }
+      // Add/change work type: "also include remote", "make it remote", "change to hybrid", "I want remote", "switch to onsite"
+      if (/(?:\b(?:also|add|include|change|switch|make)\b.*\bremote\b|\bremote\b.*\b(?:too|also|instead)\b|\b(?:i\s+want|prefer)\s+remote\b)/i.test(lower) && !changes.length) { refined.wantsRemote = true; changes.push('Added remote'); }
+      if (/(?:\b(?:also|add|include|change|switch|make)\b.*\bhybrid\b|\bhybrid\b.*\b(?:too|also|instead)\b|\b(?:i\s+want|prefer)\s+hybrid\b)/i.test(lower) && !changes.length) { refined.wantsHybrid = true; changes.push('Added hybrid'); }
+      if (/(?:\b(?:also|add|include|change|switch|make)\b.*\b(?:onsite|on-?site)\b|\b(?:onsite|on-?site)\b.*\b(?:too|also|instead)\b|\b(?:i\s+want|prefer)\s+(?:onsite|on-?site)\b)/i.test(lower) && !changes.length) { refined.wantsOnsite = true; changes.push('Added on-site'); }
+      // "make it remote" / "switch to remote" (exclusive — replaces other work types)
+      if (/\b(?:change|switch|make)\b.*\b(remote|hybrid|onsite|on-?site)\b/i.test(lower) && changes.length) {
+        const wtMatch = lower.match(/\b(?:change|switch|make)\b.*\b(remote|hybrid|onsite|on-?site)\b/i);
+        if (wtMatch) {
+          const wt = wtMatch[1].toLowerCase().replace(/-/g, '');
+          refined.wantsRemote = wt === 'remote';
+          refined.wantsHybrid = wt === 'hybrid';
+          refined.wantsOnsite = wt === 'onsite';
+          changes.length = 0;
+          changes.push(`Changed to ${wt}`);
+        }
+      }
 
       const salaryAdj = text.match(/\b(?:lower|reduce|drop|set|change|raise|increase)\b.*?(?:salary|pay|min).*?(?:to\s+)?(?:[$€£]?\s*)([\d,]+)\s*(k?)/i);
       if (salaryAdj) {
@@ -3631,6 +3633,28 @@
           else if (val < 1000) val *= 1000;
           if (val >= 1000 && val <= 1000000) { refined.salaryMin = val; changes.push(`Set salary to ${(val/1000).toFixed(0)}k`); }
         }
+      }
+      // Bare number with salary context: "salary 55", "minimum 60k"
+      if (!changes.length) {
+        const bareSal = text.match(/\b(?:salary|pay|min(?:imum)?)\b[^.]*?([\d,]+)\s*(k?)\b/i);
+        if (bareSal) {
+          let val = parseFloat(bareSal[1].replace(/,/g, ''));
+          if (/k/i.test(bareSal[2])) val *= 1000;
+          else if (val < 1000) val *= 1000;
+          if (val >= 1000 && val <= 1000000) { refined.salaryMin = val; changes.push(`Set salary to ${(val/1000).toFixed(0)}k`); }
+        }
+      }
+      // "lower salary" / "reduce salary" without a number — reduce by 20%
+      if (!changes.length && /\b(?:lower|reduce|decrease)\b.*\b(?:salary|pay|min(?:imum)?)\b/i.test(lower) && refined.salaryMin) {
+        const oldVal = refined.salaryMin;
+        refined.salaryMin = Math.round(oldVal * 0.8 / 1000) * 1000;
+        changes.push(`Lowered salary from ${(oldVal/1000).toFixed(0)}k to ${(refined.salaryMin/1000).toFixed(0)}k`);
+      }
+      // "raise salary" / "increase salary" without a number — increase by 20%
+      if (!changes.length && /\b(?:raise|increase|higher)\b.*\b(?:salary|pay|min(?:imum)?)\b/i.test(lower) && refined.salaryMin) {
+        const oldVal = refined.salaryMin;
+        refined.salaryMin = Math.round(oldVal * 1.2 / 1000) * 1000;
+        changes.push(`Raised salary from ${(oldVal/1000).toFixed(0)}k to ${(refined.salaryMin/1000).toFixed(0)}k`);
       }
 
       const addLocMatch = lower.match(/\b(?:also|add|include|try)\b.*?\b(?:in\s+)?([\w\s]+)/i);
@@ -3794,7 +3818,33 @@
         return;
       }
 
-      // Store filters
+      // Disambiguation: if filters already exist and the new input looks partial
+      // (e.g., only changes salary or location but no new role), ask the user
+      if (chatState.filters && !parsed.role && !parsed.seniority && (parsed.salaryMin || parsed.locations.length || parsed.wantsRemote || parsed.wantsHybrid || parsed.wantsOnsite)) {
+        // This looks like it could be a refinement — merge into existing filters
+        const merged = cloneFilters(chatState.filters);
+        const mergeChanges = [];
+        if (parsed.salaryMin && parsed.salaryMin !== merged.salaryMin) { merged.salaryMin = parsed.salaryMin; mergeChanges.push(`Set salary to ${(parsed.salaryMin/1000).toFixed(0)}k`); }
+        if (parsed.locations.length) { merged.locations = parsed.locations; mergeChanges.push(`Set location to ${parsed.locations.join(', ')}`); }
+        if (parsed.wantsRemote && !merged.wantsRemote) { merged.wantsRemote = true; mergeChanges.push('Added remote'); }
+        if (parsed.wantsHybrid && !merged.wantsHybrid) { merged.wantsHybrid = true; mergeChanges.push('Added hybrid'); }
+        if (parsed.wantsOnsite && !merged.wantsOnsite) { merged.wantsOnsite = true; mergeChanges.push('Added on-site'); }
+        if (mergeChanges.length) {
+          chatState.filters = merged;
+          chatState.pending = cloneFilters(merged);
+          const badges = mergeChanges.map(c => describeChange(c)).join(' ');
+          const card = buildParseCard(merged);
+          await addBotMsg(`
+            <div class="chat-bubble-msg">Updated your current search:</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin:0.25rem 0;max-width:280px">${badges}</div>
+            ${card || ''}
+          `);
+          attachApplyBtn();
+          return;
+        }
+      }
+
+      // Store filters (new search)
       chatState.filters = cloneFilters(parsed);
       chatState.pending = cloneFilters(parsed);
 
