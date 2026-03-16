@@ -3600,21 +3600,14 @@
         else if (target === 'seniority') { refined.seniority = ''; if (/junior|senior|lead|mid|staff|principal/i.test(refined.role)) refined.role = ''; changes.push('Removed seniority filter'); }
       }
 
-      // Add/change work type: "also include remote", "make it remote", "change to hybrid", "I want remote", "switch to onsite"
-      if (/(?:\b(?:also|add|include|change|switch|make)\b.*\bremote\b|\bremote\b.*\b(?:too|also|instead)\b|\b(?:i\s+want|prefer)\s+remote\b)/i.test(lower) && !changes.length) { refined.wantsRemote = true; changes.push('Added remote'); }
-      if (/(?:\b(?:also|add|include|change|switch|make)\b.*\bhybrid\b|\bhybrid\b.*\b(?:too|also|instead)\b|\b(?:i\s+want|prefer)\s+hybrid\b)/i.test(lower) && !changes.length) { refined.wantsHybrid = true; changes.push('Added hybrid'); }
-      if (/(?:\b(?:also|add|include|change|switch|make)\b.*\b(?:onsite|on-?site)\b|\b(?:onsite|on-?site)\b.*\b(?:too|also|instead)\b|\b(?:i\s+want|prefer)\s+(?:onsite|on-?site)\b)/i.test(lower) && !changes.length) { refined.wantsOnsite = true; changes.push('Added on-site'); }
-      // "make it remote" / "switch to remote" (exclusive — replaces other work types)
-      if (/\b(?:change|switch|make)\b.*\b(remote|hybrid|onsite|on-?site)\b/i.test(lower) && changes.length) {
-        const wtMatch = lower.match(/\b(?:change|switch|make)\b.*\b(remote|hybrid|onsite|on-?site)\b/i);
-        if (wtMatch) {
-          const wt = wtMatch[1].toLowerCase().replace(/-/g, '');
-          refined.wantsRemote = wt === 'remote';
-          refined.wantsHybrid = wt === 'hybrid';
-          refined.wantsOnsite = wt === 'onsite';
-          changes.length = 0;
-          changes.push(`Changed to ${wt}`);
-        }
+      // Add work types — allow multiple: "i want remote and hybrid"
+      const mentionsRemote = /\bremote\b/i.test(lower);
+      const mentionsHybrid = /\bhybrid\b/i.test(lower);
+      const mentionsOnsite = /\b(?:onsite|on-?site)\b/i.test(lower);
+      if ((mentionsRemote || mentionsHybrid || mentionsOnsite) && !changes.length) {
+        if (mentionsRemote && !refined.wantsRemote) { refined.wantsRemote = true; changes.push('Added remote'); }
+        if (mentionsHybrid && !refined.wantsHybrid) { refined.wantsHybrid = true; changes.push('Added hybrid'); }
+        if (mentionsOnsite && !refined.wantsOnsite) { refined.wantsOnsite = true; changes.push('Added on-site'); }
       }
 
       const salaryAdj = text.match(/\b(?:lower|reduce|drop|set|change|raise|increase)\b.*?(?:salary|pay|min).*?(?:to\s+)?(?:[$€£]?\s*)([\d,]+)\s*(k?)/i);
