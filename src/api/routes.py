@@ -90,11 +90,14 @@ async def _run_scrape(sources: list) -> dict:
                 }
                 continue
 
-            # Change detection
+            # Change detection — fetch all existing rows in one query
             prev_result = db.table("job_listings").select(
-                "external_id"
+                "id, external_id, salary_estimated"
             ).eq("source", source_name).eq("is_active", True).execute()
-            previous_ids = {r["external_id"] for r in prev_result.data}
+            existing_map = {
+                r["external_id"]: r for r in prev_result.data
+            }
+            previous_ids = set(existing_map.keys())
             current_ids = {l.external_id for l in normalized}
             changes = detect_changes(previous_ids, current_ids)
             summary = build_change_summary(changes)
@@ -105,11 +108,7 @@ async def _run_scrape(sources: list) -> dict:
             # Upsert listings
             now_ts = datetime.now(timezone.utc).isoformat()
             for listing in normalized:
-                existing = db.table("job_listings").select(
-                    "id, salary_estimated"
-                ).eq(
-                    "external_id", listing.external_id
-                ).eq("source", listing.source).execute()
+                existing_row = existing_map.get(listing.external_id)
 
                 row = {
                     "external_id": listing.external_id,
@@ -129,8 +128,7 @@ async def _run_scrape(sources: list) -> dict:
                     "quality_score": listing.quality_score,
                 }
 
-                if existing.data:
-                    existing_row = existing.data[0]
+                if existing_row:
                     if listing.salary_min or listing.salary_max:
                         row["salary_estimated"] = False
                         row["salary_confidence"] = None
