@@ -3102,6 +3102,7 @@
 
   // ── Smart Job Search Chat ─────────────────────────
   (function() {
+    // ── Reference Data ──────────────────────────────
     const TECH_ROLES = [
       'software engineer','software developer','web developer','frontend developer','backend developer',
       'full stack developer','fullstack developer','full-stack developer','frontend','backend','fullstack',
@@ -3124,6 +3125,10 @@
       'java developer','typescript developer','go developer','rust developer','ruby developer',
       'php developer','react developer','angular developer','vue developer','node.js developer',
     ];
+
+    // Build a Set of individual role words for typo correction
+    const ROLE_WORDS = new Set();
+    TECH_ROLES.forEach(r => r.split(/\s+/).forEach(w => { if (w.length > 3) ROLE_WORDS.add(w); }));
 
     const NON_TECH_ROLES = [
       'nurse','doctor','physician','surgeon','dentist','pharmacist','therapist','psychologist',
@@ -3165,7 +3170,130 @@
       'dubai','abu dhabi','tel aviv','istanbul','prague','budapest','bucharest',
     ];
 
-    function parseJobQuery(text) {
+    // ── Abbreviation & Synonym Expansion ────────────
+    const ABBREV = {
+      'swe':'software engineer','fe':'frontend developer','be':'backend developer',
+      'fs':'full stack developer','dev':'developer','devops':'devops engineer',
+      'sre':'site reliability engineer','pm':'product manager','po':'product owner',
+      'qa':'qa engineer','ml':'machine learning engineer','ds':'data scientist',
+      'da':'data analyst','em':'engineering manager','tl':'tech lead',
+      'dba':'database administrator','ux':'ux designer','ui':'ui designer',
+      'js':'javascript','ts':'typescript','py':'python','k8s':'kubernetes',
+      'tf':'terraform','gcp':'google cloud','aws':'amazon web services',
+      'nyc':'new york','sf':'san francisco','la':'los angeles','dc':'washington',
+      'hk':'hong kong','sg':'singapore','nz':'new zealand','aus':'australia',
+      'wfh':'remote','work from home':'remote',
+    };
+
+    const TECHNOLOGIES = new Set([
+      'react','angular','vue','svelte','next.js','nextjs','nuxt','node','express',
+      'django','flask','spring','rails','laravel','fastapi','graphql','rest api',
+      'sql','nosql','mongodb','postgres','postgresql','mysql','redis','elasticsearch',
+      'docker','kubernetes','terraform','ansible','jenkins','github actions','ci/cd',
+      'aws','azure','gcp','python','javascript','typescript','java','go','golang',
+      'rust','ruby','php','swift','kotlin','dart','flutter','react native',
+      'c++','c#','.net','scala','elixir','haskell','solidity','html','css','sass',
+      'tailwind','webpack','vite','linux','git','figma','sketch',
+    ]);
+
+    const REGION_MAP = {
+      'asia':['japan','singapore','india','south korea','hong kong'],
+      'europe':['germany','netherlands','uk','france','sweden','spain','portugal','italy'],
+      'north america':['usa','canada'],
+      'south america':['brazil','argentina','mexico'],
+      'america':['usa','canada','brazil','mexico'],
+      'africa':['south africa','kenya','nigeria'],
+      'middle east':['dubai','israel','uae'],
+      'oceania':['australia','new zealand'],
+      'nordic':['sweden','norway','denmark','finland'],
+      'eastern europe':['poland','czech republic','romania','hungary'],
+      'southeast asia':['singapore','india','japan'],
+    };
+
+    const VAGUE_ROLES = {
+      'it':['software engineer','data analyst','devops engineer','QA engineer','IT administrator'],
+      'tech':['software engineer','frontend developer','backend developer','data scientist'],
+      'computer':['software engineer','data engineer','security engineer','network engineer'],
+      'coding':['software developer','frontend developer','python developer','full stack developer'],
+      'programming':['software developer','backend developer','java developer','web developer'],
+      'digital':['product manager','UX designer','frontend developer','data analyst'],
+    };
+
+    const RESPONSES = {
+      greeting: [
+        "Hey! Tell me what kind of role you're after and I'll search for you.",
+        "Hi there! Describe your ideal job — role, location, salary — and I'll find matches.",
+        "Hello! What kind of tech role are you looking for?",
+      ],
+      thanks: [
+        "Happy to help! Let me know if you want to adjust anything.",
+        "You're welcome! I'm here if you need to tweak the search.",
+        "Anytime! Feel free to refine or start a new search.",
+      ],
+      frustration: [
+        "Sorry about that. Tell me exactly what you're looking for — like <em>'React developer in Berlin, 70k'</em> — and I'll try again.",
+        "Let me try again. What role and location are you interested in? Be as specific as you can.",
+        "My bad. Try giving me a specific role, location, or salary and I'll set up the filters.",
+      ],
+      found: [
+        "Here's what I picked up:",
+        "Got it — here's your search:",
+        "Sounds good, here's what I'm setting up:",
+      ],
+      ask_location: [
+        "Any location preference, or open to remote?",
+        "Where are you looking? Or anywhere works?",
+        "Got it. Any specific country or city in mind?",
+      ],
+      ask_role: [
+        "What kind of role are you after? (e.g., frontend, data scientist, DevOps)",
+        "What position are you looking for?",
+        "What type of tech role interests you?",
+      ],
+    };
+
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    // ── Stage 1: Normalize ──────────────────────────
+    function normalize(text) {
+      let s = text.toLowerCase().trim();
+      // Strip filler phrases
+      s = s.replace(/\b(i'm looking for|i am looking for|looking for|i want|i need|find me|show me|can you find|please|get me|search for|i'd like)\b/gi, ' ');
+      // Expand abbreviations (word-boundary)
+      for (const [abbr, full] of Object.entries(ABBREV)) {
+        const re = new RegExp('\\b' + abbr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+        s = s.replace(re, full);
+      }
+      // Simple typo correction: for tokens > 4 chars, try dropping one char
+      const tokens = s.split(/\s+/);
+      const corrected = tokens.map(t => {
+        if (t.length <= 4 || ROLE_WORDS.has(t)) return t;
+        for (let i = 0; i < t.length; i++) {
+          const attempt = t.slice(0, i) + t.slice(i + 1);
+          if (ROLE_WORDS.has(attempt)) return attempt;
+        }
+        return t;
+      });
+      return corrected.join(' ').replace(/\s+/g, ' ').trim();
+    }
+
+    // ── Stage 2: Classify Intent ────────────────────
+    function classifyIntent(text, state) {
+      const t = text.trim();
+      const lower = t.toLowerCase();
+      if (/^(hi|hello|hey|yo|sup|howdy|good\s*(morning|afternoon|evening)|hiya|what'?s up)[\s!?.]*$/i.test(t)) return 'greeting';
+      if (/\b(thanks?|thank\s*you|cheers|thx|ty|appreciate|perfect|awesome|great job|nice one)\b/i.test(lower) && t.length < 40) return 'thanks';
+      if (/\b(broken|sucks|doesn.?t work|useless|terrible|awful|ugh|wtf|stupid|waste|garbage|horrible)\b/i.test(lower)) return 'frustration';
+      if (/\b(what sources|which sources|where.+from|how does|how do you|what can you|what do you|help me|how.+work|what.+track|which boards)\b/i.test(lower) || (lower.endsWith('?') && lower.length < 60)) return 'question';
+      // Bare value: short answer when bot asked a question
+      if (state.lastBotQuestion && t.length < 40 && !/\b(remove|drop|without|not enough|no results|also|add|include|change)\b/i.test(lower)) return 'bare_value';
+      // Refinement
+      if (state.filters && /\b(remove|drop|without|no results|not enough|too few|too many|fewer|more results|broaden|widen|expand|narrow|lower|reduce|raise|increase|also|add|include|change|switch|try|didn.?t find|couldn.?t find|found nothing|no luck|no jobs|no listings|nothing came|nothing show|0 results|zero results|empty|still no|show more|open it up)\b/i.test(lower)) return 'refine';
+      return 'search';
+    }
+
+    // ── Stage 3: Extract Entities ───────────────────
+    function extract(text) {
       const lower = text.toLowerCase();
 
       // Non-tech detection
@@ -3175,15 +3303,38 @@
         if (re.test(lower)) { nonTechMatch = nt; break; }
       }
 
-      // Role extraction — exact match first
+      // Role — exact phrase match in TECH_ROLES
       let role = '';
       for (const tr of TECH_ROLES) {
         if (lower.includes(tr)) { role = tr; break; }
       }
-      // Fallback: "as a/an X" or "for a/an X" pattern
+      // Fallback: "as a/an X" pattern
       if (!role && !nonTechMatch) {
         const m = text.match(/(?:as\s+an?\s+|for\s+an?\s+|position\s+(?:of\s+)?|role\s+(?:as\s+an?\s+)?)([A-Za-z][A-Za-z\s\-\/]+?)(?=\s+(?:in\b|at\b|with\b|,|\.|$))/i);
         if (m) role = m[1].trim().toLowerCase();
+      }
+
+      // Technology detection — if no role found, use tech as role
+      let technologies = [];
+      for (const tech of TECHNOLOGIES) {
+        const re = new RegExp('\\b' + tech.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+        if (re.test(lower)) technologies.push(tech);
+      }
+      if (!role && technologies.length) {
+        role = technologies[0]; // Use first tech as role search term
+      }
+
+      // Vague role auto-select: "IT", "tech", "coding" → pick broadest + note alternatives
+      let vagueRoleAlts = null;
+      if (!role && !nonTechMatch) {
+        for (const [term, alts] of Object.entries(VAGUE_ROLES)) {
+          const re = new RegExp('\\b' + term + '\\b', 'i');
+          if (re.test(lower)) {
+            role = alts[0].toLowerCase(); // Auto-select first
+            vagueRoleAlts = { term, alts };
+            break;
+          }
+        }
       }
 
       // Seniority
@@ -3196,19 +3347,32 @@
       }
       if (!role && seniority) role = seniority;
 
-      // Locations
+      // Locations — exact match
       const locations = [];
       for (const loc of LOCATIONS) {
         const re = new RegExp('\\b' + loc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
         if (re.test(lower) && !locations.includes(loc)) locations.push(loc);
       }
 
+      // Region auto-expansion: "Asia" → expand to actual countries
+      let expandedRegion = null;
+      if (!locations.length) {
+        for (const [region, countries] of Object.entries(REGION_MAP)) {
+          const re = new RegExp('\\b' + region.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+          if (re.test(lower) && countries.length) {
+            countries.forEach(c => { if (!locations.includes(c)) locations.push(c); });
+            expandedRegion = region;
+            break;
+          }
+        }
+      }
+
       // Work type
-      const wantsRemote = /\bremote\b|\bwork from home\b|\bwfh\b|\banywhere\b/.test(lower);
+      const wantsRemote = /\bremote\b|\banywhere\b|\bdistributed\b/.test(lower);
       const wantsHybrid = /\bhybrid\b/.test(lower);
       const wantsOnsite = /\bonsite\b|\bon[- ]site\b|\bin[- ]?office\b|\boffice[- ]based\b/.test(lower);
 
-      // Salary — look for explicit minimum first
+      // Salary
       let salaryMin = null;
       const minMatch = text.match(/(?:minimum\s+(?:salary\s+)?(?:of\s+)?|at\s+least\s+|min[\s.:]+)(?:[$€£]?\s*)([\d,]+)\s*(k?)/i);
       if (minMatch) {
@@ -3216,10 +3380,9 @@
         if (/k/i.test(minMatch[2])) val *= 1000;
         if (val >= 10000 && val <= 1000000) salaryMin = val;
       }
-      // Then scan for any "NNk" or large number if no min found
       if (!salaryMin) {
         const nums = [];
-        const re = /(?:[$€£]?\s*)([\d]+(?:[,]\d{3})*(?:\.\d+)?)\s*(k)\b/gi;
+        const re = /(?:[$€£]?\s*)([\d]+(?:[,]\d{3})*)\s*(k)\b/gi;
         let m;
         while ((m = re.exec(lower)) !== null) {
           const val = parseFloat(m[1].replace(/,/g, '')) * 1000;
@@ -3228,17 +3391,103 @@
         if (nums.length) salaryMin = Math.min(...nums);
       }
 
-      return { role, seniority, locations, wantsRemote, wantsHybrid, wantsOnsite, salaryMin, isNonTech: !!nonTechMatch, nonTechMatch };
+      return {
+        role, seniority, locations, wantsRemote, wantsHybrid, wantsOnsite, salaryMin,
+        technologies, isNonTech: !!nonTechMatch, nonTechMatch,
+        expandedRegion, vagueRoleAlts,
+      };
     }
 
+    // ── Stage 4: Evaluate Completeness ──────────────
+    function evaluateCompleteness(parsed) {
+      const has = {
+        role: !!(parsed.role || parsed.seniority),
+        location: !!(parsed.locations.length || parsed.wantsRemote || parsed.wantsHybrid || parsed.wantsOnsite),
+        salary: !!parsed.salaryMin,
+      };
+      const count = Object.values(has).filter(Boolean).length;
+      if (count >= 2 || has.role) return { ready: true, missing: null };
+      if (has.location && !has.role) return { ready: false, missing: 'role' };
+      if (has.salary && !has.role) return { ready: false, missing: 'role' };
+      return { ready: false, missing: 'role' };
+    }
+
+    // ── Handle Question Intent ──────────────────────
+    function handleQuestion(text) {
+      const lower = text.toLowerCase();
+      if (/source|board|where.+from|data.+from|aggregat/i.test(lower)) {
+        return `<div class="chat-bubble-msg">JobPulse aggregates jobs from 5 sources:<br>
+          <strong>RemoteOK</strong> — remote-first roles<br>
+          <strong>Arbeitnow</strong> — EU & DACH focus<br>
+          <strong>Jobicy</strong> — remote tech jobs<br>
+          <strong>We Work Remotely</strong> — curated remote<br>
+          <strong>Adzuna</strong> — global job search engine</div>`;
+      }
+      if (/how.+(work|use)|what.+(do|can)|help/i.test(lower)) {
+        return `<div class="chat-bubble-msg">Just describe your ideal job in plain English! I'll extract the role, location, salary, and work type, then set up the filters for you.<br><br>
+          Try: <em>"Senior React developer in Germany, remote ok, 80k min"</em><br><br>
+          After searching, you can refine by saying things like <em>"remove salary"</em> or <em>"not enough results"</em>.</div>`;
+      }
+      if (/how many|count|total/i.test(lower)) {
+        const el = document.getElementById('hero-total');
+        const count = el ? el.textContent : 'many';
+        return `<div class="chat-bubble-msg">We currently have <strong>${count}</strong> active job listings across all sources.</div>`;
+      }
+      return `<div class="chat-bubble-msg">I can help you search for tech jobs by role, location, salary, and work type. Try something like <em>"Python developer in Canada, remote, 70k"</em>.</div>`;
+    }
+
+    // ── Merge Bare Value Into State ─────────────────
+    function mergeBareValue(text, state) {
+      const normalized = normalize(text);
+      const q = state.lastBotQuestion;
+
+      if (q === 'location') {
+        // Try to extract a location or detect remote
+        const locs = [];
+        for (const loc of LOCATIONS) {
+          const re = new RegExp('\\b' + loc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+          if (re.test(normalized)) locs.push(loc);
+        }
+        // Check regions
+        if (!locs.length) {
+          for (const [region, countries] of Object.entries(REGION_MAP)) {
+            const re = new RegExp('\\b' + region.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+            if (re.test(normalized) && countries.length) { countries.forEach(c => locs.push(c)); break; }
+          }
+        }
+        if (locs.length) { state.filters.locations = locs; state.lastBotQuestion = null; return true; }
+        if (/\bremote\b|\banywhere\b/i.test(normalized)) { state.filters.wantsRemote = true; state.lastBotQuestion = null; return true; }
+      }
+
+      if (q === 'role') {
+        // Try to find a role
+        const extracted = extract(normalized);
+        if (extracted.role) { state.filters.role = extracted.role; state.filters.seniority = extracted.seniority; state.lastBotQuestion = null; return true; }
+        // Maybe it's just a tech name
+        for (const tech of TECHNOLOGIES) {
+          if (normalized.includes(tech)) { state.filters.role = tech; state.lastBotQuestion = null; return true; }
+        }
+      }
+
+      if (q === 'salary') {
+        const salMatch = normalized.match(/([\d,]+)\s*(k?)/i);
+        if (salMatch) {
+          let val = parseFloat(salMatch[1].replace(/,/g, ''));
+          if (/k/i.test(salMatch[2])) val *= 1000;
+          if (val >= 1000 && val <= 1000000) { state.filters.salaryMin = val; state.lastBotQuestion = null; return true; }
+        }
+      }
+
+      return false;
+    }
+
+    // ── Apply, Card, UI Helpers (kept) ──────────────
     function applyParsedFilters(parsed) {
-      // Set all fields (clear if empty, so refinement removals take effect)
       document.getElementById('filter-role').value = parsed.role || '';
       const locs = (parsed.locations || []).filter(l => l !== 'remote');
       document.getElementById('filter-location').value = locs.length ? locs.join(', ') : '';
       document.getElementById('filter-salary').value = parsed.salaryMin || '';
 
-      // Work type hero buttons — determine which to activate
       let wt = 'all';
       if (parsed.wantsRemote && !parsed.wantsHybrid && !parsed.wantsOnsite) wt = 'remote';
       else if (parsed.wantsHybrid && !parsed.wantsRemote && !parsed.wantsOnsite) wt = 'hybrid';
@@ -3250,7 +3499,6 @@
       loadJobs();
       updateAlertBannerVisibility();
 
-      // Switch to jobs view
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('jobs-view').classList.add('active');
       document.getElementById('nav-jobs').classList.add('active');
@@ -3259,7 +3507,6 @@
     }
 
     const messagesEl = document.getElementById('chat-messages');
-
     function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
     function addUserMsg(text) {
@@ -3272,41 +3519,30 @@
 
     function addBotMsg(innerHtml) {
       return new Promise(resolve => {
-        // Typing indicator
         const typing = document.createElement('div');
         typing.className = 'chat-msg bot';
-        typing.innerHTML = `
-          <div class="chat-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></div>
-          <div class="chat-typing-indicator"><span></span><span></span><span></span></div>
-        `;
+        typing.innerHTML = `<div class="chat-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></div><div class="chat-typing-indicator"><span></span><span></span><span></span></div>`;
         messagesEl.appendChild(typing);
         messagesEl.scrollTop = messagesEl.scrollHeight;
-
         setTimeout(() => {
           typing.remove();
           const div = document.createElement('div');
           div.className = 'chat-msg bot';
-          div.innerHTML = `
-            <div class="chat-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></div>
-            <div>${innerHtml}</div>
-          `;
+          div.innerHTML = `<div class="chat-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></div><div>${innerHtml}</div>`;
           messagesEl.appendChild(div);
           messagesEl.scrollTop = messagesEl.scrollHeight;
           resolve(div);
-        }, 550 + Math.random() * 250);
+        }, 500 + Math.random() * 300);
       });
     }
 
-    function buildParseCard(parsed) {
+    function buildParseCard(parsed, withApply = true) {
       const rows = [];
       if (parsed.role || parsed.seniority) {
-        const label = [parsed.seniority, parsed.role]
-          .filter(Boolean)
-          .map(r => r.charAt(0).toUpperCase() + r.slice(1))
-          .join(' ');
+        const label = [parsed.seniority, parsed.role].filter(Boolean).map(r => r.charAt(0).toUpperCase() + r.slice(1)).join(' ');
         rows.push(`<div class="parse-row"><span class="parse-label">Role</span><span class="parse-chip role">${esc(label)}</span></div>`);
       }
-      if (parsed.locations.length) {
+      if (parsed.locations && parsed.locations.length) {
         const chips = parsed.locations.map(l => `<span class="parse-chip location">${esc(l.charAt(0).toUpperCase() + l.slice(1))}</span>`).join('');
         rows.push(`<div class="parse-row"><span class="parse-label">Location</span>${chips}</div>`);
       }
@@ -3316,19 +3552,21 @@
       if (parsed.wantsOnsite) wt.push('<span class="parse-chip worktype">On-site</span>');
       if (wt.length) rows.push(`<div class="parse-row"><span class="parse-label">Type</span>${wt.join('')}</div>`);
       if (parsed.salaryMin) {
-        const fmt = `${(parsed.salaryMin / 1000).toFixed(0)}k+`;
-        rows.push(`<div class="parse-row"><span class="parse-label">Salary</span><span class="parse-chip salary">${fmt}</span></div>`);
+        rows.push(`<div class="parse-row"><span class="parse-label">Salary</span><span class="parse-chip salary">${(parsed.salaryMin / 1000).toFixed(0)}k+</span></div>`);
+      }
+      if (parsed.technologies && parsed.technologies.length) {
+        const chips = parsed.technologies.map(t => `<span class="parse-chip role">${esc(t)}</span>`).join('');
+        rows.push(`<div class="parse-row"><span class="parse-label">Skills</span>${chips}</div>`);
       }
       if (!rows.length) return null;
-      return `<div class="parse-card">${rows.join('')}<button class="chat-apply-btn" id="chat-apply-btn">Apply to Search &rarr;</button></div>`;
+      const btn = withApply ? '<button class="chat-apply-btn" id="chat-apply-btn">Apply to Search &rarr;</button>' : '';
+      return `<div class="parse-card">${rows.join('')}${btn}</div>`;
     }
 
     function initWelcome() {
       messagesEl.innerHTML = '';
       addBotMsg(`
-        <div class="chat-bubble-msg">
-          Hi! Tell me what you're looking for and I'll set up your filters instantly.
-        </div>
+        <div class="chat-bubble-msg">Hey! Describe your ideal job and I'll set up the search for you.</div>
         <div class="chat-suggestions" style="max-width:280px;margin-top:0.5rem">
           <button class="chat-suggestion-pill" data-q="Junior software engineer in Germany, remote ok, 60k min">Junior SWE · Germany</button>
           <button class="chat-suggestion-pill" data-q="Senior frontend developer, fully remote, minimum salary 90k">Senior Frontend · Remote</button>
@@ -3338,95 +3576,60 @@
       `);
     }
 
-    // ── Refinement engine ───────────────────────────
-    let activeFilters = null; // tracks what was last applied
+    // ── Conversation State ──────────────────────────
+    let chatState = {
+      filters: null,
+      pending: null,
+      lastBotQuestion: null,
+      turnCount: 0,
+    };
 
     function cloneFilters(f) {
-      return { role: f.role, seniority: f.seniority, locations: [...f.locations], wantsRemote: f.wantsRemote, wantsHybrid: f.wantsHybrid, wantsOnsite: f.wantsOnsite, salaryMin: f.salaryMin };
-    }
-
-    function looksLikeRefinement(text) {
-      return /\b(remove|drop|without|no results|not enough|too few|too many|fewer|more results|broaden|widen|expand|narrow|lower|reduce|raise|increase|also|add|include|change|switch|try|didn.?t find|couldn.?t find|found nothing|no luck|no jobs|no listings|nothing came|nothing showed|0 results|zero results|empty|still no|show more|open it up)\b/i.test(text);
+      return { role: f.role, seniority: f.seniority, locations: [...(f.locations||[])], wantsRemote: f.wantsRemote, wantsHybrid: f.wantsHybrid, wantsOnsite: f.wantsOnsite, salaryMin: f.salaryMin, technologies: f.technologies ? [...f.technologies] : [] };
     }
 
     function describeChange(label) {
-      return `<span class="parse-chip worktype" style="background:var(--red);background:rgba(239,68,68,0.1);color:#dc2626">${esc(label)}</span>`;
+      return `<span class="parse-chip worktype" style="background:rgba(239,68,68,0.1);color:#dc2626">${esc(label)}</span>`;
     }
 
+    // ── Refinement Engine (kept) ────────────────────
     function parseRefinement(text, current) {
       const lower = text.toLowerCase();
       const refined = cloneFilters(current);
       const changes = [];
 
-      // ── Explicit removals ──────────────────────────
       const removePattern = /\b(?:remove|drop|clear|no|without|ditch|skip|forget)\b.*?\b(salary|pay|location|city|country|role|title|remote|hybrid|onsite|on-site|seniority)\b/i;
       const removeMatch = lower.match(removePattern);
       if (removeMatch) {
         const target = removeMatch[1].toLowerCase();
-        if (target === 'salary' || target === 'pay') {
-          refined.salaryMin = null;
-          changes.push('Removed salary filter');
-        } else if (target === 'location' || target === 'city' || target === 'country') {
-          refined.locations = [];
-          changes.push('Removed location filter');
-        } else if (target === 'role' || target === 'title') {
-          refined.role = '';
-          refined.seniority = '';
-          changes.push('Removed role filter');
-        } else if (target === 'remote') {
-          refined.wantsRemote = false;
-          changes.push('Removed remote filter');
-        } else if (target === 'hybrid') {
-          refined.wantsHybrid = false;
-          changes.push('Removed hybrid filter');
-        } else if (target === 'onsite' || target === 'on-site') {
-          refined.wantsOnsite = false;
-          changes.push('Removed on-site filter');
-        } else if (target === 'seniority') {
-          refined.seniority = '';
-          if (/junior|senior|lead|mid|staff|principal/i.test(refined.role)) refined.role = '';
-          changes.push('Removed seniority filter');
-        }
+        if (target === 'salary' || target === 'pay') { refined.salaryMin = null; changes.push('Removed salary filter'); }
+        else if (target === 'location' || target === 'city' || target === 'country') { refined.locations = []; changes.push('Removed location filter'); }
+        else if (target === 'role' || target === 'title') { refined.role = ''; refined.seniority = ''; changes.push('Removed role filter'); }
+        else if (target === 'remote') { refined.wantsRemote = false; changes.push('Removed remote filter'); }
+        else if (target === 'hybrid') { refined.wantsHybrid = false; changes.push('Removed hybrid filter'); }
+        else if (target === 'onsite' || target === 'on-site') { refined.wantsOnsite = false; changes.push('Removed on-site filter'); }
+        else if (target === 'seniority') { refined.seniority = ''; if (/junior|senior|lead|mid|staff|principal/i.test(refined.role)) refined.role = ''; changes.push('Removed seniority filter'); }
       }
 
-      // ── "also add remote/hybrid/onsite" ────────────
-      if (/\b(?:also|add|include)\b.*\bremote\b/i.test(lower)) {
-        refined.wantsRemote = true;
-        changes.push('Added remote');
-      }
-      if (/\b(?:also|add|include)\b.*\bhybrid\b/i.test(lower)) {
-        refined.wantsHybrid = true;
-        changes.push('Added hybrid');
-      }
-      if (/\b(?:also|add|include)\b.*\b(?:onsite|on-site)\b/i.test(lower)) {
-        refined.wantsOnsite = true;
-        changes.push('Added on-site');
-      }
+      if (/\b(?:also|add|include)\b.*\bremote\b/i.test(lower)) { refined.wantsRemote = true; changes.push('Added remote'); }
+      if (/\b(?:also|add|include)\b.*\bhybrid\b/i.test(lower)) { refined.wantsHybrid = true; changes.push('Added hybrid'); }
+      if (/\b(?:also|add|include)\b.*\b(?:onsite|on-site)\b/i.test(lower)) { refined.wantsOnsite = true; changes.push('Added on-site'); }
 
-      // ── Salary adjustments: "lower salary to 50k" ──
       const salaryAdj = text.match(/\b(?:lower|reduce|drop|set|change|raise|increase)\b.*?(?:salary|pay|min).*?(?:to\s+)?(?:[$€£]?\s*)([\d,]+)\s*(k?)/i);
       if (salaryAdj) {
         let val = parseFloat(salaryAdj[1].replace(/,/g, ''));
         if (/k/i.test(salaryAdj[2])) val *= 1000;
-        if (val >= 1000 && val <= 1000000) {
-          refined.salaryMin = val;
-          changes.push(`Set salary minimum to ${(val/1000).toFixed(0)}k`);
-        }
+        if (val >= 1000 && val <= 1000000) { refined.salaryMin = val; changes.push(`Set salary to ${(val/1000).toFixed(0)}k`); }
       }
 
-      // ── Location additions: "also in Canada" ───────
       const addLocMatch = lower.match(/\b(?:also|add|include|try)\b.*?\b(?:in\s+)?([\w\s]+)/i);
       if (addLocMatch && !changes.length) {
         for (const loc of LOCATIONS) {
           const re = new RegExp('\\b' + loc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-          if (re.test(addLocMatch[1]) && !refined.locations.includes(loc)) {
-            refined.locations.push(loc);
-            changes.push(`Added ${loc} to locations`);
-          }
+          if (re.test(addLocMatch[1]) && !refined.locations.includes(loc)) { refined.locations.push(loc); changes.push(`Added ${loc}`); }
         }
       }
 
-      // ── Location change: "change location to X" ────
       const changeLocMatch = lower.match(/\b(?:change|switch)\b.*?\blocation\b.*?\bto\b\s+([\w\s,]+)/i);
       if (changeLocMatch) {
         refined.locations = [];
@@ -3437,229 +3640,185 @@
         if (refined.locations.length) changes.push(`Changed location to ${refined.locations.join(', ')}`);
       }
 
-      // ── Auto-broaden: "not enough results", "no results", "too few" ──
       if (/(?:no results|not enough|too few|nothing|empty|zero|0 results|didn.?t find|couldn.?t find|no jobs|no listings|found nothing|no luck|still no|nothing came|nothing show)/i.test(lower) && !changes.length) {
-        // Priority: salary → work type restriction → location → seniority
-        if (refined.salaryMin) {
-          changes.push(`Removed salary filter (was ${(refined.salaryMin/1000).toFixed(0)}k+)`);
-          refined.salaryMin = null;
-        } else if (!refined.wantsRemote && (refined.wantsHybrid || refined.wantsOnsite)) {
-          refined.wantsRemote = true;
-          changes.push('Also including remote jobs');
-        } else if (refined.locations.length) {
-          const old = refined.locations.join(', ');
-          refined.locations = [];
-          changes.push(`Removed location filter (was ${old})`);
-        } else if (refined.seniority) {
-          changes.push(`Removed seniority filter (was ${refined.seniority})`);
-          refined.seniority = '';
-          if (/junior|senior|lead|mid|staff|principal/i.test(refined.role)) refined.role = '';
-        } else {
-          // Nothing left to broaden
-          changes.push('All filters are already as broad as possible');
-        }
+        if (refined.salaryMin) { changes.push(`Removed salary (was ${(refined.salaryMin/1000).toFixed(0)}k+)`); refined.salaryMin = null; }
+        else if (!refined.wantsRemote && (refined.wantsHybrid || refined.wantsOnsite)) { refined.wantsRemote = true; changes.push('Also including remote'); }
+        else if (refined.locations.length) { const old = refined.locations.join(', '); refined.locations = []; changes.push(`Removed location (was ${old})`); }
+        else if (refined.seniority) { changes.push(`Removed seniority (was ${refined.seniority})`); refined.seniority = ''; if (/junior|senior|lead|mid|staff|principal/i.test(refined.role)) refined.role = ''; }
+        else { changes.push('All filters are already as broad as possible'); }
       }
 
-      // ── Auto-narrow: "too many results" ────────────
       if (/\b(?:too many|too broad|narrow|more specific|fewer results)\b/i.test(lower) && !changes.length) {
-        if (!refined.wantsRemote && !refined.wantsHybrid && !refined.wantsOnsite) {
-          refined.wantsRemote = true;
-          changes.push('Narrowed to remote jobs only');
-        } else if (!refined.salaryMin) {
-          refined.salaryMin = 50000;
-          changes.push('Added 50k minimum salary');
-        } else {
-          changes.push('Try specifying a location or seniority level to narrow results');
-        }
+        if (!refined.wantsRemote && !refined.wantsHybrid && !refined.wantsOnsite) { refined.wantsRemote = true; changes.push('Narrowed to remote only'); }
+        else if (!refined.salaryMin) { refined.salaryMin = 50000; changes.push('Added 50k minimum salary'); }
+        else { changes.push('Try specifying a location or seniority to narrow results'); }
       }
 
       return { refined, changes };
     }
 
-    let pendingParsed = null;
-
-    // Unique ID counter so each apply button gets its own listener
     let applyBtnCounter = 0;
-
     function attachApplyBtn() {
       const btnId = 'chat-apply-btn-' + applyBtnCounter;
-      // Rename the button we just inserted so getElementById works
       const generic = document.getElementById('chat-apply-btn');
       if (generic) generic.id = btnId;
-      const applyBtn = document.getElementById(btnId);
-      if (applyBtn) {
-        applyBtn.addEventListener('click', () => {
-          applyParsedFilters(pendingParsed);
+      const btn = document.getElementById(btnId);
+      if (btn) {
+        btn.addEventListener('click', () => {
+          applyParsedFilters(chatState.pending);
           document.getElementById('chat-panel').classList.remove('open');
         });
       }
       applyBtnCounter++;
     }
 
-    // ── Vague input detection ──────────────────────
-    const VAGUE_ROLES = {
-      'it':        ['software engineer', 'data analyst', 'devops engineer', 'QA engineer', 'IT administrator'],
-      'tech':      ['software engineer', 'frontend developer', 'backend developer', 'data scientist'],
-      'computer':  ['software engineer', 'data engineer', 'security engineer', 'network engineer'],
-      'coding':    ['software developer', 'frontend developer', 'python developer', 'full stack developer'],
-      'programming': ['software developer', 'backend developer', 'java developer', 'web developer'],
-      'digital':   ['product manager', 'UX designer', 'frontend developer', 'data analyst'],
-      'web':       ['web developer', 'frontend developer', 'full stack developer', 'react developer'],
-      'data':      ['data scientist', 'data analyst', 'data engineer', 'analytics engineer'],
-      'cyber':     ['security engineer', 'penetration tester', 'cybersecurity engineer'],
-      'cloud':     ['cloud engineer', 'devops engineer', 'platform engineer', 'SRE'],
-      'ai':        ['AI engineer', 'ML engineer', 'data scientist', 'research engineer'],
-      'design':    ['UX designer', 'UI designer', 'product designer', 'graphic designer'],
-    };
-
-    const VAGUE_LOCATIONS = {
-      'asia':         ['Japan', 'Singapore', 'India', 'South Korea', 'Hong Kong'],
-      'europe':       ['Germany', 'Netherlands', 'UK', 'France', 'Sweden'],
-      'america':      ['USA', 'Canada', 'Brazil', 'Mexico'],
-      'north america': ['USA', 'Canada'],
-      'south america': ['Brazil', 'Argentina', 'Mexico'],
-      'africa':       ['South Africa', 'Nigeria', 'Kenya'],
-      'middle east':  ['Dubai', 'Israel', 'UAE'],
-      'oceania':      ['Australia', 'New Zealand'],
-      'nordic':       ['Sweden', 'Norway', 'Denmark', 'Finland'],
-      'eastern europe': ['Poland', 'Czech Republic', 'Romania', 'Hungary'],
-      'southeast asia': ['Singapore', 'Vietnam', 'Thailand', 'Philippines'],
-      'somewhere':    [],
-      'anywhere':     [],
-    };
-
-    function detectVagueHints(text) {
-      const lower = text.toLowerCase();
-      const parts = [];
-
-      // Check for vague roles
-      let vagueRole = null;
-      for (const [term, suggestions] of Object.entries(VAGUE_ROLES)) {
-        const re = new RegExp('\\b' + term + '\\b', 'i');
-        if (re.test(lower)) { vagueRole = { term, suggestions }; break; }
-      }
-
-      // Check for vague locations (continents / regions)
-      let vagueLoc = null;
-      for (const [term, suggestions] of Object.entries(VAGUE_LOCATIONS)) {
-        const re = new RegExp('\\b' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-        if (re.test(lower)) { vagueLoc = { term, suggestions }; break; }
-      }
-
-      if (!vagueRole && !vagueLoc) return null;
-
-      let html = '<div class="chat-bubble-msg">I can work with that, but could you be a bit more specific?</div>';
-
-      if (vagueRole) {
-        const pills = vagueRole.suggestions.map(s =>
-          `<button class="chat-suggestion-pill" data-q="${esc(s)}${vagueLoc && vagueLoc.suggestions.length ? ' in ' + vagueLoc.suggestions[0] : ''}">${esc(s)}</button>`
-        ).join('');
-        html += `<div class="chat-bubble-msg" style="margin-top:0.35rem"><strong>"${esc(vagueRole.term)}"</strong> is pretty broad — did you mean one of these?</div>`;
-        html += `<div class="chat-suggestions" style="max-width:280px;margin-top:0.35rem">${pills}</div>`;
-      }
-
-      if (vagueLoc) {
-        if (vagueLoc.suggestions.length) {
-          const locPills = vagueLoc.suggestions.map(s =>
-            `<button class="chat-suggestion-pill" data-q="${vagueRole ? esc(vagueRole.suggestions[0]) + ' in ' : ''}${esc(s)}, remote ok">${esc(s)}</button>`
-          ).join('');
-          html += `<div class="chat-bubble-msg" style="margin-top:0.35rem"><strong>"${esc(vagueLoc.term)}"</strong> covers many countries — pick a specific one:</div>`;
-          html += `<div class="chat-suggestions" style="max-width:280px;margin-top:0.35rem">${locPills}</div>`;
-        } else {
-          html += `<div class="chat-bubble-msg" style="margin-top:0.35rem">Try naming a specific country or city so I can filter properly.</div>`;
-        }
-      }
-
-      return html;
-    }
-
+    // ── Main Pipeline: handleSend ───────────────────
     async function handleSend() {
       const input = document.getElementById('chat-input');
-      const text = input.value.trim();
-      if (!text) return;
+      const rawText = input.value.trim();
+      if (!rawText) return;
       input.value = '';
       input.style.height = '';
-      addUserMsg(text);
+      addUserMsg(rawText);
+      chatState.turnCount++;
 
-      // ── Check if this is a refinement of previous search ──
-      if (looksLikeRefinement(text) && activeFilters) {
-        const { refined, changes } = parseRefinement(text, activeFilters);
+      const normalized = normalize(rawText);
+      const intent = classifyIntent(rawText, chatState);
 
-        if (!changes.length) {
-          await addBotMsg(`<div class="chat-bubble-msg chat-no-filter-hint">I wasn't sure what to change. Try something like <em>"remove the salary filter"</em> or <em>"also include remote"</em>.</div>`);
+      // ── Greeting ──
+      if (intent === 'greeting') {
+        await addBotMsg(`<div class="chat-bubble-msg">${pick(RESPONSES.greeting)}</div>`);
+        return;
+      }
+
+      // ── Thanks ──
+      if (intent === 'thanks') {
+        await addBotMsg(`<div class="chat-bubble-msg">${pick(RESPONSES.thanks)}</div>`);
+        return;
+      }
+
+      // ── Frustration ──
+      if (intent === 'frustration') {
+        await addBotMsg(`<div class="chat-bubble-msg">${pick(RESPONSES.frustration)}</div>`);
+        chatState.lastBotQuestion = null;
+        return;
+      }
+
+      // ── Question ──
+      if (intent === 'question') {
+        await addBotMsg(handleQuestion(rawText));
+        return;
+      }
+
+      // ── Bare Value (contextual short answer) ──
+      if (intent === 'bare_value' && chatState.filters) {
+        const merged = mergeBareValue(normalized, chatState);
+        if (merged) {
+          const { ready, missing } = evaluateCompleteness(chatState.filters);
+          if (ready) {
+            chatState.pending = cloneFilters(chatState.filters);
+            const card = buildParseCard(chatState.filters);
+            await addBotMsg(`<div class="chat-bubble-msg">${pick(RESPONSES.found)}</div>${card}`);
+            attachApplyBtn();
+          } else {
+            const partialCard = buildParseCard(chatState.filters, false);
+            chatState.lastBotQuestion = missing;
+            await addBotMsg(`<div class="chat-bubble-msg">${partialCard ? '' : ''}${pick(RESPONSES['ask_' + missing] || RESPONSES.ask_role)}</div>${partialCard || ''}`);
+          }
           return;
         }
+        // Couldn't merge — fall through to search
+      }
 
+      // ── Refine ──
+      if (intent === 'refine' && chatState.filters) {
+        const { refined, changes } = parseRefinement(rawText, chatState.filters);
+        if (!changes.length) {
+          await addBotMsg(`<div class="chat-bubble-msg">I wasn't sure what to change. Try <em>"remove salary"</em> or <em>"also include remote"</em>.</div>`);
+          return;
+        }
         const allBroad = changes.includes('All filters are already as broad as possible');
-        const changeBadges = changes.map(c => describeChange(c)).join(' ');
-
-        pendingParsed = refined;
-        activeFilters = cloneFilters(refined);
+        const badges = changes.map(c => describeChange(c)).join(' ');
+        chatState.filters = cloneFilters(refined);
+        chatState.pending = cloneFilters(refined);
         const card = buildParseCard(refined);
         await addBotMsg(`
-          <div class="chat-bubble-msg">${allBroad ? "Your search is already wide open — try a different role or location instead." : "Got it, here's the updated search:"}</div>
-          ${!allBroad ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin:0.25rem 0;max-width:280px">${changeBadges}</div>` : ''}
+          <div class="chat-bubble-msg">${allBroad ? "Your search is already wide open — try a different role or location." : "Got it, updated:"}</div>
+          ${!allBroad ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin:0.25rem 0;max-width:280px">${badges}</div>` : ''}
           ${!allBroad && card ? card : ''}
         `);
-
         if (!allBroad) attachApplyBtn();
         return;
       }
 
-      // ── Refinement words but no active search yet ──
-      if (looksLikeRefinement(text) && !activeFilters) {
-        await addBotMsg(`
-          <div class="chat-bubble-msg chat-no-filter-hint">
-            I don't have a previous search to refine yet. Start with something like:<br>
-            <em>"Frontend developer in Germany, remote, 60k min"</em><br>
-            Then I can help you adjust from there.
-          </div>
-        `);
-        return;
-      }
-
-      // ── New search ──
-      const parsed = parseJobQuery(text);
+      // ── Search (default) ──
+      const parsed = extract(normalized);
 
       if (parsed.isNonTech) {
         await addBotMsg(`
-          <div class="chat-bubble-msg">This one's outside our lane — JobPulse focuses on tech roles.</div>
+          <div class="chat-bubble-msg">That's outside our focus — JobPulse tracks tech roles only.</div>
           <div class="chat-non-tech">
-            <strong>Better platforms for "${esc(parsed.nonTechMatch)}" roles:</strong>
-            Indeed, LinkedIn Jobs, Glassdoor, or industry-specific boards will serve you better here.
-            We cover software engineering, data, DevOps, design, product, and related tech roles.
+            <strong>For "${esc(parsed.nonTechMatch)}" roles, try:</strong>
+            Indeed, LinkedIn Jobs, Glassdoor, or industry-specific boards.
           </div>
         `);
         return;
       }
 
-      const hasFilter = parsed.role || parsed.seniority || parsed.locations.length || parsed.salaryMin || parsed.wantsRemote || parsed.wantsHybrid || parsed.wantsOnsite;
+      const hasAnything = parsed.role || parsed.seniority || parsed.locations.length || parsed.salaryMin || parsed.wantsRemote || parsed.wantsHybrid || parsed.wantsOnsite || parsed.technologies.length;
 
-      // ── Vague input guidance ──
-      if (!hasFilter) {
-        const hints = detectVagueHints(text);
-        if (hints) {
-          await addBotMsg(hints);
-        } else {
-          await addBotMsg(`
-            <div class="chat-bubble-msg chat-no-filter-hint">
-              I couldn't pick out specific filters from that. Try something like:<br>
-              <em>"Senior React developer in Canada, remote, 90k min"</em>
-            </div>
-          `);
-        }
+      if (!hasAnything) {
+        // Truly nothing extracted — ask for role
+        chatState.lastBotQuestion = 'role';
+        await addBotMsg(`
+          <div class="chat-bubble-msg">${pick(RESPONSES.ask_role)}</div>
+          <div class="chat-suggestions" style="max-width:280px;margin-top:0.4rem">
+            <button class="chat-suggestion-pill" data-q="software engineer">Software Engineer</button>
+            <button class="chat-suggestion-pill" data-q="frontend developer">Frontend</button>
+            <button class="chat-suggestion-pill" data-q="data scientist">Data Scientist</button>
+            <button class="chat-suggestion-pill" data-q="devops engineer">DevOps</button>
+            <button class="chat-suggestion-pill" data-q="product manager">Product Manager</button>
+          </div>
+        `);
         return;
       }
 
-      // Set activeFilters immediately so refinements work right away
-      pendingParsed = parsed;
-      activeFilters = cloneFilters(parsed);
-      const card = buildParseCard(parsed);
-      await addBotMsg(`<div class="chat-bubble-msg">Here's what I found:</div>${card}`);
-      attachApplyBtn();
+      // Store filters
+      chatState.filters = cloneFilters(parsed);
+      chatState.pending = cloneFilters(parsed);
+
+      // Build context notes for the response
+      let notes = '';
+      if (parsed.expandedRegion) {
+        notes += `<div class="chat-bubble-msg" style="margin-top:0.3rem;font-size:0.78rem;color:var(--text-secondary)">Expanded <strong>${esc(parsed.expandedRegion)}</strong> to ${parsed.locations.map(l => esc(l)).join(', ')}</div>`;
+      }
+
+      // Show alternative role suggestions if vague
+      let altPills = '';
+      if (parsed.vagueRoleAlts) {
+        const pills = parsed.vagueRoleAlts.alts.slice(1).map(a =>
+          `<button class="chat-suggestion-pill" data-q="${esc(a)}${parsed.locations.length ? ' in ' + esc(parsed.locations[0]) : ''}">${esc(a)}</button>`
+        ).join('');
+        altPills = `<div class="chat-bubble-msg" style="margin-top:0.3rem;font-size:0.78rem;color:var(--text-secondary)">
+          I went with <strong>${esc(parsed.role)}</strong> for "${esc(parsed.vagueRoleAlts.term)}" — or did you mean:</div>
+          <div class="chat-suggestions" style="max-width:280px;margin-top:0.3rem">${pills}</div>`;
+      }
+
+      const { ready, missing } = evaluateCompleteness(parsed);
+
+      if (ready) {
+        const card = buildParseCard(parsed);
+        chatState.lastBotQuestion = null;
+        await addBotMsg(`<div class="chat-bubble-msg">${pick(RESPONSES.found)}</div>${card}${notes}${altPills}`);
+        attachApplyBtn();
+      } else {
+        const partialCard = buildParseCard(parsed, false);
+        chatState.lastBotQuestion = missing;
+        await addBotMsg(`${partialCard || ''}${notes}${altPills}<div class="chat-bubble-msg" style="margin-top:0.4rem">${pick(RESPONSES['ask_' + missing] || RESPONSES.ask_role)}</div>`);
+      }
     }
 
-    // Open / close
+    // ── Event Listeners ─────────────────────────────
     document.getElementById('chat-bubble-btn').addEventListener('click', () => {
       const panel = document.getElementById('chat-panel');
       if (!panel.classList.contains('open')) {
@@ -3687,7 +3846,6 @@
       this.style.height = Math.min(this.scrollHeight, 100) + 'px';
     });
 
-    // Suggestion pill clicks (delegated)
     messagesEl.addEventListener('click', e => {
       const pill = e.target.closest('.chat-suggestion-pill');
       if (pill) {
@@ -3696,7 +3854,6 @@
       }
     });
 
-    // Show attention badge after 3s to draw first-time visitor attention
     setTimeout(() => {
       if (!document.getElementById('chat-panel').classList.contains('open')) {
         const badge = document.getElementById('chat-attention-badge');
