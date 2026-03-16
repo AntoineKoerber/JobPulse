@@ -3172,7 +3172,7 @@
 
     // ── Abbreviation & Synonym Expansion ────────────
     const ABBREV = {
-      'swe':'software engineer','fe':'frontend developer','be':'backend developer',
+      'swe':'software engineer','fe':'frontend developer',
       'fs':'full stack developer','dev':'developer','devops':'devops engineer',
       'sre':'site reliability engineer','pm':'product manager','po':'product owner',
       'qa':'qa engineer','ml':'machine learning engineer','ds':'data scientist',
@@ -3288,7 +3288,7 @@
       // Bare value: short answer when bot asked a question
       if (state.lastBotQuestion && t.length < 40 && !/\b(remove|drop|without|not enough|no results|also|add|include|change)\b/i.test(lower)) return 'bare_value';
       // Refinement
-      if (state.filters && /\b(remove|drop|without|no results|not enough|too few|too many|fewer|more results|broaden|widen|expand|narrow|lower|reduce|raise|increase|also|add|include|change|switch|try|didn.?t find|couldn.?t find|found nothing|no luck|no jobs|no listings|nothing came|nothing show|0 results|zero results|empty|still no|show more|open it up)\b/i.test(lower)) return 'refine';
+      if (state.filters && /\b(remove|drop|without|no results|not enough|too few|too many|fewer|more results|broaden|widen|expand|narrow|lower|reduce|raise|increase|also|add|include|change|switch|try|didn.?t find|couldn.?t find|found nothing|no luck|no jobs|no listings|nothing came|nothing show|0 results|zero results|empty|still no|show more|open it up|minimum\s+salary|salary\s+should|set\s+salary|salary\s+to|min\s+should|minimum\s+should|salary\s+at\s+least|make\s+salary|update\s+salary|adjust\s+salary)\b/i.test(lower)) return 'refine';
       return 'search';
     }
 
@@ -3619,7 +3619,18 @@
       if (salaryAdj) {
         let val = parseFloat(salaryAdj[1].replace(/,/g, ''));
         if (/k/i.test(salaryAdj[2])) val *= 1000;
+        else if (val < 1000) val *= 1000;
         if (val >= 1000 && val <= 1000000) { refined.salaryMin = val; changes.push(`Set salary to ${(val/1000).toFixed(0)}k`); }
+      }
+      // "minimum salary should be 55", "salary should be 70k", "min should be 60"
+      if (!changes.length) {
+        const salSet = text.match(/\b(?:min(?:imum)?|salary|pay)\b.*?\b(?:should\s+be|to|at\s+least|at)\b\s*(?:[$€£]?\s*)([\d,]+)\s*(k?)/i);
+        if (salSet) {
+          let val = parseFloat(salSet[1].replace(/,/g, ''));
+          if (/k/i.test(salSet[2])) val *= 1000;
+          else if (val < 1000) val *= 1000;
+          if (val >= 1000 && val <= 1000000) { refined.salaryMin = val; changes.push(`Set salary to ${(val/1000).toFixed(0)}k`); }
+        }
       }
 
       const addLocMatch = lower.match(/\b(?:also|add|include|try)\b.*?\b(?:in\s+)?([\w\s]+)/i);
