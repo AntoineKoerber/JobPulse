@@ -105,7 +105,9 @@ async def _run_scrape(sources: list) -> dict:
             # Upsert listings
             now_ts = datetime.now(timezone.utc).isoformat()
             for listing in normalized:
-                existing = db.table("job_listings").select("id").eq(
+                existing = db.table("job_listings").select(
+                    "id, salary_estimated"
+                ).eq(
                     "external_id", listing.external_id
                 ).eq("source", listing.source).execute()
 
@@ -128,8 +130,17 @@ async def _run_scrape(sources: list) -> dict:
                 }
 
                 if existing.data:
+                    existing_row = existing.data[0]
+                    if listing.salary_min or listing.salary_max:
+                        row["salary_estimated"] = False
+                        row["salary_confidence"] = None
+                        row["salary_estimation_method"] = None
+                    elif existing_row.get("salary_estimated"):
+                        row.pop("salary_min", None)
+                        row.pop("salary_max", None)
+                        row.pop("currency", None)
                     db.table("job_listings").update(row).eq(
-                        "id", existing.data[0]["id"]
+                        "id", existing_row["id"]
                     ).execute()
                 else:
                     row["first_seen"] = now_ts

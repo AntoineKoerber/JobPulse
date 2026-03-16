@@ -989,6 +989,11 @@
       font-weight: 400;
       color: var(--text-tertiary);
     }
+    .job-salary.estimated {
+      font-style: italic;
+      color: var(--text-secondary);
+      opacity: 0.85;
+    }
 
     .job-source {
       padding: 0.3rem 0.6rem;
@@ -2380,15 +2385,19 @@
     }
   });
 
-  // Salary column filter (cycles: all -> has -> none -> all)
+  // Salary column filter (cycles: all -> has -> estimated -> none -> all)
   document.getElementById('salary-filter').addEventListener('click', () => {
     const el = document.getElementById('salary-filter');
     if (salaryFilter === 'all') {
       salaryFilter = 'has';
       el.classList.add('active');
       el.innerHTML = 'With Salary <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
-      el.title = 'Showing jobs with salary. Click to show jobs without salary.';
+      el.title = 'Showing jobs with salary. Click to show AI-estimated only.';
     } else if (salaryFilter === 'has') {
+      salaryFilter = 'estimated';
+      el.innerHTML = '≈ Estimated <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+      el.title = 'Showing AI-estimated salaries. Click to show jobs without salary.';
+    } else if (salaryFilter === 'estimated') {
       salaryFilter = 'none';
       el.innerHTML = 'No Salary <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>';
       el.title = 'Showing jobs without salary. Click to show all jobs.';
@@ -2480,6 +2489,8 @@
     // Salary info filter (from column header)
     if (salaryFilter === 'has') {
       f += '&or=(salary_min.not.is.null,salary_max.not.is.null)';
+    } else if (salaryFilter === 'estimated') {
+      f += '&salary_estimated=eq.true';
     } else if (salaryFilter === 'none') {
       f += '&salary_min=is.null&salary_max=is.null';
     }
@@ -2487,7 +2498,7 @@
     const off = (page - 1) * PAGE_SIZE;
     try {
       const res = await fetch(
-        `${SB}/rest/v1/job_listings?${f}&select=id,external_id,source,title,company,location,salary_min,salary_max,currency,tags,url`,
+        `${SB}/rest/v1/job_listings?${f}&select=id,external_id,source,title,company,location,salary_min,salary_max,currency,tags,url,salary_estimated,salary_confidence`,
         { headers: { ...H, 'Prefer': 'count=exact', 'Range': `${off}-${off + PAGE_SIZE - 1}` } }
       );
       let data = await res.json();
@@ -2531,6 +2542,7 @@
       const rawLoc = decodeHtml(j.location) || '';
       const loc = esc(titleCase(rawLoc) || '—');
       const hasSalary = j.salary_min || j.salary_max;
+      const isEstimated = j.salary_estimated;
       const firstTag = (j.tags || [])[0];
       const tags = firstTag ? `<span class="tag">${esc(fmtTag(decodeHtml(firstTag)))}</span>` : '';
       const url = j.url || '#';
@@ -2554,7 +2566,7 @@
           ${workTypeBadge(workType)}
         </div>
         <div class="job-tags">${tags || '<span class="tag" style="opacity:0.3">—</span>'}</div>
-        <span class="job-salary${hasSalary ? '' : ' none'}">${sal}</span>
+        <span class="job-salary${hasSalary ? (isEstimated ? ' estimated' : '') : ' none'}"${isEstimated ? ` title="AI-estimated salary (${Math.round((j.salary_confidence||0)*100)}% confidence)"` : ''}>${isEstimated ? '≈ ' : ''}${sal}</span>
         <span class="job-source ${j.source}">${fmtSource(j.source)}</span>
         <div class="job-arrow">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>

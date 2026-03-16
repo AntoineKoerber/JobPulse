@@ -27,7 +27,9 @@ def get_salary_distribution(db: Client) -> List[dict]:
     """Get salary range distribution in buckets."""
     result = db.table("job_listings").select(
         "salary_min, salary_max"
-    ).eq("is_active", True).or_("salary_min.not.is.null,salary_max.not.is.null").execute()
+    ).eq("is_active", True).or_(
+        "salary_min.not.is.null,salary_max.not.is.null"
+    ).or_("salary_estimated.is.null,salary_estimated.eq.false").execute()
 
     buckets = {
         "0-50k": 0, "50k-80k": 0, "80k-120k": 0,

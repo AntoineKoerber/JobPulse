@@ -40,6 +40,10 @@ class JobListing(BaseModel):
     is_active: bool = True
     consecutive_misses: int = 0
     quality_score: int = 0
+    salary_estimated: bool = False
+    salary_confidence: Optional[float] = None
+    salary_estimation_method: Optional[str] = None
+    salary_estimated_at: Optional[str] = None
 
 
 class ScrapeRequest(BaseModel):

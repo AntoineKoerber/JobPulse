@@ -6,6 +6,7 @@ stability track → upsert) for all configured sources, then exits.
 
 import asyncio
 import logging
+import os
 import sys
 from datetime import datetime, timezone
 
@@ -104,7 +105,9 @@ async def run_scrape():
 
             now_ts = datetime.now(timezone.utc).isoformat()
             for listing in normalized:
-                existing = db.table("job_listings").select("id").eq(
+                existing = db.table("job_listings").select(
+                    "id, salary_estimated"
+                ).eq(
                     "external_id", listing.external_id
                 ).eq("source", listing.source).execute()
 
@@ -127,8 +130,19 @@ async def run_scrape():
                 }
 
                 if existing.data:
+                    existing_row = existing.data[0]
+                    # If scrape has real salary data, clear the estimated flag
+                    if listing.salary_min or listing.salary_max:
+                        row["salary_estimated"] = False
+                        row["salary_confidence"] = None
+                        row["salary_estimation_method"] = None
+                    # Don't overwrite estimated salary with NULL
+                    elif existing_row.get("salary_estimated"):
+                        row.pop("salary_min", None)
+                        row.pop("salary_max", None)
+                        row.pop("currency", None)
                     db.table("job_listings").update(row).eq(
-                        "id", existing.data[0]["id"]
+                        "id", existing_row["id"]
                     ).execute()
                 else:
                     row["first_seen"] = now_ts
@@ -157,6 +171,18 @@ async def run_scrape():
         except Exception as e:
             logger.error("%s: failed — %s", source_name, e, exc_info=True)
             results[source_name] = {"status": "failed", "error": str(e)}
+
+    # ── Salary estimation (runs after all sources complete) ──
+    from src.pipeline.salary_estimator import estimate_salaries
+
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    try:
+        est_results = await estimate_salaries(db, openai_api_key=openai_key)
+        logger.info("Salary estimation: %s", est_results)
+        results["salary_estimation"] = est_results
+    except Exception as e:
+        logger.error("Salary estimation failed: %s", e, exc_info=True)
+        results["salary_estimation"] = {"status": "failed", "error": str(e)}
 
     return results
 
