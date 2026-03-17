@@ -94,13 +94,16 @@ async def run_scrape():
                 continue
 
             # Fetch all existing rows for this source in ONE query
-            prev_result = db.table("job_listings").select(
-                "id, external_id, salary_estimated"
-            ).eq("source", source_name).eq("is_active", True).execute()
+            # Include inactive rows to avoid duplicate key errors on re-insert
+            all_result = db.table("job_listings").select(
+                "id, external_id, salary_estimated, is_active"
+            ).eq("source", source_name).execute()
             existing_map = {
-                r["external_id"]: r for r in prev_result.data
+                r["external_id"]: r for r in all_result.data
             }
-            previous_ids = set(existing_map.keys())
+            previous_ids = {
+                r["external_id"] for r in all_result.data if r.get("is_active")
+            }
             current_ids = {l.external_id for l in normalized}
             changes = detect_changes(previous_ids, current_ids)
             summary = build_change_summary(changes)

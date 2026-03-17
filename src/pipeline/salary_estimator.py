@@ -349,11 +349,23 @@ class AIEstimator:
                 self.total_tokens += response.usage.total_tokens
 
             content = response.choices[0].message.content
+            logger.info("AI response: %s", content[:500])
             parsed = json.loads(content)
 
-            # Handle both {"estimates": [...]} and direct array
+            # json_object mode always returns a dict — find the array inside
             if isinstance(parsed, dict):
-                estimates_raw = parsed.get("estimates", parsed.get("results", []))
+                estimates_raw = None
+                for val in parsed.values():
+                    if isinstance(val, list):
+                        estimates_raw = val
+                        break
+                if estimates_raw is None:
+                    # Single estimate wrapped in a dict
+                    if "salary_min" in parsed:
+                        estimates_raw = [parsed]
+                    else:
+                        logger.warning("Unexpected AI response structure: %s", list(parsed.keys()))
+                        estimates_raw = []
             else:
                 estimates_raw = parsed
 
