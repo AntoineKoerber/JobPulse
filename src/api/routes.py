@@ -90,16 +90,24 @@ async def _run_scrape(sources: list) -> dict:
                 }
                 continue
 
-            # Change detection — fetch all existing rows in one query
+            # Change detection — fetch all existing rows (paginated)
             # Include inactive rows to avoid duplicate key errors on re-insert
-            all_result = db.table("job_listings").select(
-                "id, external_id, salary_estimated, is_active"
-            ).eq("source", source_name).execute()
+            all_rows = []
+            page_size = 1000
+            offset = 0
+            while True:
+                batch = db.table("job_listings").select(
+                    "id, external_id, salary_estimated, is_active"
+                ).eq("source", source_name).range(offset, offset + page_size - 1).execute()
+                all_rows.extend(batch.data)
+                if len(batch.data) < page_size:
+                    break
+                offset += page_size
             existing_map = {
-                r["external_id"]: r for r in all_result.data
+                r["external_id"]: r for r in all_rows
             }
             previous_ids = {
-                r["external_id"] for r in all_result.data if r.get("is_active")
+                r["external_id"] for r in all_rows if r.get("is_active")
             }
             current_ids = {l.external_id for l in normalized}
             changes = detect_changes(previous_ids, current_ids)

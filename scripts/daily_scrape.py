@@ -93,16 +93,24 @@ async def run_scrape():
                 results[source_name] = {"status": "fallback", "score": mean_score}
                 continue
 
-            # Fetch all existing rows for this source in ONE query
+            # Fetch all existing rows for this source (paginated to avoid 1000-row limit)
             # Include inactive rows to avoid duplicate key errors on re-insert
-            all_result = db.table("job_listings").select(
-                "id, external_id, salary_estimated, is_active"
-            ).eq("source", source_name).execute()
+            all_rows = []
+            page_size = 1000
+            offset = 0
+            while True:
+                batch = db.table("job_listings").select(
+                    "id, external_id, salary_estimated, is_active"
+                ).eq("source", source_name).range(offset, offset + page_size - 1).execute()
+                all_rows.extend(batch.data)
+                if len(batch.data) < page_size:
+                    break
+                offset += page_size
             existing_map = {
-                r["external_id"]: r for r in all_result.data
+                r["external_id"]: r for r in all_rows
             }
             previous_ids = {
-                r["external_id"] for r in all_result.data if r.get("is_active")
+                r["external_id"] for r in all_rows if r.get("is_active")
             }
             current_ids = {l.external_id for l in normalized}
             changes = detect_changes(previous_ids, current_ids)
@@ -194,7 +202,7 @@ def main():
     results = asyncio.run(run_scrape())
     logger.info("Scrape complete: %s", results)
 
-    failed = [s for s, r in results.items() if r["status"] == "failed"]
+    failed = [s for s, r in results.items() if r.get("status") == "failed"]
     if failed:
         logger.error("Failed sources: %s", failed)
         sys.exit(1)

@@ -197,12 +197,21 @@ class StatisticalEstimator:
         """
         self._cache.clear()
 
-        result = db.table("job_listings").select(
-            "title, location, salary_min, salary_max, currency"
-        ).eq("is_active", True).not_.is_("salary_min", "null").execute()
+        all_salary_rows = []
+        offset = 0
+        while True:
+            batch = db.table("job_listings").select(
+                "title, location, salary_min, salary_max, currency"
+            ).eq("is_active", True).not_.is_(
+                "salary_min", "null"
+            ).range(offset, offset + 999).execute()
+            all_salary_rows.extend(batch.data)
+            if len(batch.data) < 1000:
+                break
+            offset += 1000
 
         total = 0
-        for row in result.data:
+        for row in all_salary_rows:
             sal_min = row.get("salary_min")
             sal_max = row.get("salary_max")
             currency = row.get("currency") or "USD"
@@ -409,14 +418,20 @@ async def estimate_salaries(db, openai_api_key: Optional[str] = None) -> dict:
     stat = StatisticalEstimator()
     total_samples = stat.build_model(db)
 
-    # 2. Find jobs needing estimation
-    query = db.table("job_listings").select(
-        "id, title, company, location, tags, salary_min, salary_max, "
-        "salary_estimated, salary_estimated_at"
-    ).eq("is_active", True).is_("salary_min", "null").is_("salary_max", "null")
-
-    result = query.execute()
-    candidates = result.data
+    # 2. Find jobs needing estimation (paginated)
+    candidates = []
+    offset = 0
+    while True:
+        batch = db.table("job_listings").select(
+            "id, title, company, location, tags, salary_min, salary_max, "
+            "salary_estimated, salary_estimated_at"
+        ).eq("is_active", True).is_("salary_min", "null").is_(
+            "salary_max", "null"
+        ).range(offset, offset + 999).execute()
+        candidates.extend(batch.data)
+        if len(batch.data) < 1000:
+            break
+        offset += 1000
 
     if not candidates:
         logger.info("No jobs need salary estimation")
