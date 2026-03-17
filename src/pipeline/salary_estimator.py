@@ -218,6 +218,9 @@ class StatisticalEstimator:
 
             if not sal_min and not sal_max:
                 continue
+            # Skip zero/very low values — bad data
+            if (sal_min and sal_min < 5000) or (sal_max and sal_max < 5000):
+                continue
 
             title = row.get("title") or ""
             location = row.get("location") or ""
@@ -417,11 +420,38 @@ async def estimate_salaries(db, openai_api_key: Optional[str] = None) -> dict:
 
     Returns summary stats.
     """
+    # 0. Clean up bad estimates (zero/negative values) — reset so they get re-estimated
+    cleanup = db.table("job_listings").update({
+        "salary_min": None,
+        "salary_max": None,
+        "currency": None,
+        "salary_estimated": False,
+        "salary_confidence": None,
+        "salary_estimation_method": None,
+        "salary_estimated_at": None,
+    }).eq("salary_estimated", True).lte("salary_min", 0).execute()
+    cleaned = len(cleanup.data) if cleanup.data else 0
+
+    cleanup2 = db.table("job_listings").update({
+        "salary_min": None,
+        "salary_max": None,
+        "currency": None,
+        "salary_estimated": False,
+        "salary_confidence": None,
+        "salary_estimation_method": None,
+        "salary_estimated_at": None,
+    }).eq("salary_estimated", True).lte("salary_max", 0).execute()
+    cleaned += len(cleanup2.data) if cleanup2.data else 0
+
+    if cleaned:
+        logger.info("Cleaned %d bad estimates (zero/negative values)", cleaned)
+
     # 1. Build statistical model
     stat = StatisticalEstimator()
     total_samples = stat.build_model(db)
 
     # 2. Find jobs needing estimation (paginated)
+    # Includes jobs with null salary AND jobs with bad estimated values (salary < 5000)
     candidates = []
     offset = 0
     while True:
