@@ -278,8 +278,11 @@ class StatisticalEstimator:
                 elif region == "asia":
                     out_currency = "USD"  # Most Asia jobs listed in USD
 
-                min_val = int(median(stats.min_values))
-                max_val = int(median(stats.max_values))
+                min_val = int(median(stats.min_values)) if stats.min_values else 0
+                max_val = int(median(stats.max_values)) if stats.max_values else 0
+
+                if min_val <= 0 or max_val <= 0:
+                    continue  # Skip this match, try relaxed
 
                 return SalaryEstimate(
                     salary_min=from_usd(min_val, out_currency),
@@ -451,8 +454,11 @@ async def estimate_salaries(db, openai_api_key: Optional[str] = None) -> dict:
 
         if est and est.confidence >= MIN_CONFIDENCE:
             # Good enough — use statistical estimate directly
-            _save_estimate(db, row["id"], est)
-            stat_count += 1
+            if _save_estimate(db, row["id"], est):
+                stat_count += 1
+            else:
+                ai_queue.append((row, None))
+                continue
         else:
             # Queue for AI (with statistical hint if available)
             ai_queue.append((row, est))
@@ -521,8 +527,23 @@ async def estimate_salaries(db, openai_api_key: Optional[str] = None) -> dict:
     return summary
 
 
+def _is_valid_estimate(est: SalaryEstimate) -> bool:
+    """Check that an estimate has sensible values."""
+    if est.salary_min <= 0 or est.salary_max <= 0:
+        return False
+    if est.salary_min < 5000 or est.salary_max < 5000:
+        return False
+    if est.salary_max > 2000000:
+        return False
+    return True
+
+
 def _save_estimate(db, listing_id: int, est: SalaryEstimate):
     """Persist a salary estimate to the database."""
+    if not _is_valid_estimate(est):
+        logger.warning("Skipping invalid estimate for listing %d: min=%d max=%d",
+                       listing_id, est.salary_min, est.salary_max)
+        return False
     now = datetime.now(timezone.utc).isoformat()
     db.table("job_listings").update({
         "salary_min": est.salary_min,
@@ -533,3 +554,4 @@ def _save_estimate(db, listing_id: int, est: SalaryEstimate):
         "salary_estimation_method": est.method,
         "salary_estimated_at": now,
     }).eq("id", listing_id).execute()
+    return True

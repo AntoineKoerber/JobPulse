@@ -992,7 +992,20 @@
     .job-salary.estimated {
       font-style: italic;
       color: var(--text-secondary);
-      opacity: 0.85;
+    }
+    .job-salary .ai-badge {
+      display: inline-block;
+      font-size: 0.55rem;
+      font-style: normal;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(59,130,246,0.12));
+      color: #7c3aed;
+      vertical-align: middle;
+      margin-right: 0.3rem;
+      border: 1px solid rgba(139,92,246,0.2);
     }
 
     .job-source {
@@ -2566,7 +2579,7 @@
           ${workTypeBadge(workType)}
         </div>
         <div class="job-tags">${tags || '<span class="tag" style="opacity:0.3">—</span>'}</div>
-        <span class="job-salary${hasSalary ? (isEstimated ? ' estimated' : '') : ' none'}"${isEstimated ? ` title="AI-estimated salary (${Math.round((j.salary_confidence||0)*100)}% confidence)"` : ''}>${isEstimated ? '≈ ' : ''}${sal}</span>
+        <span class="job-salary${hasSalary ? (isEstimated ? ' estimated' : '') : ' none'}"${isEstimated ? ` title="AI-estimated salary (${Math.round((j.salary_confidence||0)*100)}% confidence)"` : ''}>${isEstimated ? '<span class="ai-badge">AI EST.</span>' : ''}${sal}</span>
         <span class="job-source ${j.source}">${fmtSource(j.source)}</span>
         <div class="job-arrow">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
