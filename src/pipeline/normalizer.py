@@ -109,6 +109,34 @@ def normalize_location(raw_location: Optional[str]) -> Optional[str]:
     return location
 
 
+_HOURLY_PATTERN = re.compile(
+    r"[\$€£]?\s*(\d+(?:\.\d+)?)\s*(?:[\$€£])?\s*(?:/\s*h(?:ou)?r|per\s*h(?:ou)?r|hourly|hr\b|/h\b)",
+    re.IGNORECASE,
+)
+
+_HOURLY_RANGE_PATTERN = re.compile(
+    r"[\$€£]?\s*(\d+(?:\.\d+)?)\s*[-–—to]+\s*[\$€£]?\s*(\d+(?:\.\d+)?)\s*(?:[\$€£])?\s*(?:/\s*h(?:ou)?r|per\s*h(?:ou)?r|hourly|hr\b|/h\b)",
+    re.IGNORECASE,
+)
+
+# Standard annual working hours (40 hrs/week × 52 weeks)
+_ANNUAL_HOURS = 2080
+
+# Salary-like context: currency symbols, k suffix, /yr, /year, annual, salary
+_SALARY_CONTEXT = re.compile(
+    r"[\$€£]|salary|annual|per\s*year|/yr|/year|\dk\b",
+    re.IGNORECASE,
+)
+
+# Pattern to extract salary amounts with currency context
+_SALARY_AMOUNT = re.compile(
+    r"[\$€£]\s*(\d+(?:\.\d+)?)\s*[kK]?"
+    r"|(\d+(?:\.\d+)?)\s*[kK]"
+    r"|(\d+(?:\.\d+)?)\s*(?:USD|EUR|GBP)",
+    re.IGNORECASE,
+)
+
+
 def extract_salary(
     raw: Optional[str] = None,
     salary_min: Optional[int] = None,
@@ -117,7 +145,7 @@ def extract_salary(
     """Parse salary information into (min, max, currency).
 
     Handles both pre-parsed numeric values and raw salary strings like
-    "$120k - $180k", "100,000 - 150,000 EUR", etc.
+    "$120k - $180k", "100,000 - 150,000 EUR", "$50/hr", etc.
     """
     if salary_min is not None or salary_max is not None:
         return (salary_min, salary_max, "USD")
@@ -134,17 +162,52 @@ def extract_salary(
     elif "GBP" in raw.upper() or "\u00a3" in raw:
         currency = "GBP"
 
-    # Find all numbers, handle "k" suffix
+    # 1. Check for hourly rates first (e.g. "$50/hr", "$40-60/hour")
+    hourly_range = _HOURLY_RANGE_PATTERN.search(raw)
+    if hourly_range:
+        lo = float(hourly_range.group(1)) * _ANNUAL_HOURS
+        hi = float(hourly_range.group(2)) * _ANNUAL_HOURS
+        return (int(min(lo, hi)), int(max(lo, hi)), currency)
+
+    hourly = _HOURLY_PATTERN.search(raw)
+    if hourly:
+        annual = float(hourly.group(1)) * _ANNUAL_HOURS
+        return (int(annual), int(annual), currency)
+
+    # 2. Extract salary amounts that have currency context ($ sign, k suffix, etc.)
+    #    This avoids grabbing random numbers from titles like version numbers or dates
     numbers = []
-    for match in re.finditer(r"(\d+(?:\.\d+)?)\s*[kK]?", raw):
-        val = float(match.group(1))
-        if "k" in raw[match.start():match.end()].lower():
+    for match in _SALARY_AMOUNT.finditer(raw):
+        # Pick whichever group matched
+        val_str = match.group(1) or match.group(2) or match.group(3)
+        val = float(val_str)
+        # Check if "k" suffix applies
+        span = raw[match.start():match.end()]
+        if "k" in span.lower() or "K" in span:
             val *= 1000
         numbers.append(int(val))
 
     if len(numbers) >= 2:
         return (min(numbers), max(numbers), currency)
-    elif len(numbers) == 1:
+
+    # 3. Fallback: extract bare numbers if the string looks salary-related
+    #    Also handles cases where only one number had currency context but
+    #    there's a range like "80000-120000 USD"
+    if _SALARY_CONTEXT.search(raw):
+        numbers = []
+        for match in re.finditer(r"(\d+(?:\.\d+)?)\s*[kK]?", raw):
+            val = float(match.group(1))
+            if "k" in raw[match.start():match.end()].lower():
+                val *= 1000
+            numbers.append(int(val))
+
+        if len(numbers) >= 2:
+            return (min(numbers), max(numbers), currency)
+        elif len(numbers) == 1:
+            return (numbers[0], numbers[0], currency)
+
+    # 4. Single currency-prefixed number (e.g. "$5000" in a title)
+    if len(numbers) == 1:
         return (numbers[0], numbers[0], currency)
 
     return (None, None, None)

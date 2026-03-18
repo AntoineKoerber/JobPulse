@@ -67,6 +67,7 @@ class HNFreelanceStrategy(BaseScrapeStrategy):
                 tags=["tech", "contract"],
                 url=url,
                 posted_at=posted_at,
+                salary_raw=title,
             )
         except Exception as e:
             logger.warning("Failed to parse HN Jobs item: %s", e)

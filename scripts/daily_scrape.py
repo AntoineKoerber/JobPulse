@@ -101,7 +101,7 @@ async def run_scrape():
             while True:
                 batch = db.table("job_listings").select(
                     "id, external_id, salary_estimated, is_active"
-                ).eq("source", source_name).range(offset, offset + page_size - 1).execute()
+                ).eq("source", source_name).order("id").range(offset, offset + page_size - 1).execute()
                 all_rows.extend(batch.data)
                 if len(batch.data) < page_size:
                     break

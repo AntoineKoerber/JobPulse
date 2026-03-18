@@ -13,7 +13,7 @@ import os
 import re
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from statistics import median
 
@@ -204,7 +204,9 @@ class StatisticalEstimator:
                 "title, location, salary_min, salary_max, currency"
             ).eq("is_active", True).not_.is_(
                 "salary_min", "null"
-            ).range(offset, offset + 999).execute()
+            ).or_(
+                "salary_estimated.is.null,salary_estimated.eq.false"
+            ).order("id").range(offset, offset + 999).execute()
             all_salary_rows.extend(batch.data)
             if len(batch.data) < 1000:
                 break
@@ -420,8 +422,8 @@ async def estimate_salaries(db, openai_api_key: Optional[str] = None) -> dict:
 
     Returns summary stats.
     """
-    # 0. Clean up bad estimates (zero/negative values) — reset so they get re-estimated
-    cleanup = db.table("job_listings").update({
+    # 0. Clean up bad estimates — reset values below $5000 (matches _is_valid_estimate)
+    reset_fields = {
         "salary_min": None,
         "salary_max": None,
         "currency": None,
@@ -429,29 +431,36 @@ async def estimate_salaries(db, openai_api_key: Optional[str] = None) -> dict:
         "salary_confidence": None,
         "salary_estimation_method": None,
         "salary_estimated_at": None,
-    }).eq("salary_estimated", True).lte("salary_min", 0).execute()
+    }
+    cleanup = db.table("job_listings").update(
+        reset_fields
+    ).eq("salary_estimated", True).lt("salary_min", 5000).execute()
     cleaned = len(cleanup.data) if cleanup.data else 0
 
-    cleanup2 = db.table("job_listings").update({
+    cleanup2 = db.table("job_listings").update(
+        reset_fields
+    ).eq("salary_estimated", True).lt("salary_max", 5000).execute()
+    cleaned += len(cleanup2.data) if cleanup2.data else 0
+
+    # Also clean up bad raw-extracted salaries (not estimated, but garbage values)
+    cleanup3 = db.table("job_listings").update({
         "salary_min": None,
         "salary_max": None,
         "currency": None,
-        "salary_estimated": False,
-        "salary_confidence": None,
-        "salary_estimation_method": None,
-        "salary_estimated_at": None,
-    }).eq("salary_estimated", True).lte("salary_max", 0).execute()
-    cleaned += len(cleanup2.data) if cleanup2.data else 0
+    }).or_(
+        "salary_estimated.is.null,salary_estimated.eq.false"
+    ).lt("salary_min", 100).not_.is_("salary_min", "null").execute()
+    cleaned += len(cleanup3.data) if cleanup3.data else 0
 
     if cleaned:
-        logger.info("Cleaned %d bad estimates (zero/negative values)", cleaned)
+        logger.info("Cleaned %d bad salary values", cleaned)
 
     # 1. Build statistical model
     stat = StatisticalEstimator()
     total_samples = stat.build_model(db)
 
     # 2. Find jobs needing estimation (paginated)
-    # Includes jobs with null salary AND jobs with bad estimated values (salary < 5000)
+    # a) Jobs with no salary at all
     candidates = []
     offset = 0
     while True:
@@ -460,11 +469,45 @@ async def estimate_salaries(db, openai_api_key: Optional[str] = None) -> dict:
             "salary_estimated, salary_estimated_at"
         ).eq("is_active", True).is_("salary_min", "null").is_(
             "salary_max", "null"
-        ).range(offset, offset + 999).execute()
+        ).order("id").range(offset, offset + 999).execute()
         candidates.extend(batch.data)
         if len(batch.data) < 1000:
             break
         offset += 1000
+
+    # b) Jobs with stale estimates (older than 14 days) — re-estimate
+    stale_cutoff = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
+    stale_candidates = []
+    offset = 0
+    while True:
+        batch = db.table("job_listings").select(
+            "id, title, company, location, tags, salary_min, salary_max, "
+            "salary_estimated, salary_estimated_at"
+        ).eq("is_active", True).eq(
+            "salary_estimated", True
+        ).lt(
+            "salary_estimated_at", stale_cutoff
+        ).order("id").range(offset, offset + 999).execute()
+        stale_candidates.extend(batch.data)
+        if len(batch.data) < 1000:
+            break
+        offset += 1000
+
+    if stale_candidates:
+        logger.info("Found %d stale estimates (>14 days) to re-estimate", len(stale_candidates))
+        # Bulk reset stale estimates
+        db.table("job_listings").update({
+            "salary_min": None,
+            "salary_max": None,
+            "currency": None,
+            "salary_estimated": False,
+            "salary_confidence": None,
+            "salary_estimation_method": None,
+            "salary_estimated_at": None,
+        }).eq("is_active", True).eq(
+            "salary_estimated", True
+        ).lt("salary_estimated_at", stale_cutoff).execute()
+        candidates.extend(stale_candidates)
 
     if not candidates:
         logger.info("No jobs need salary estimation")
