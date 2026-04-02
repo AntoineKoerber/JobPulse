@@ -24,6 +24,7 @@ from src.pipeline.change_detector import detect_changes, build_change_summary
 from src.resilience.stability_tracker import update_stability
 from src.resilience.fallback import get_last_successful_scrape, record_fallback_usage
 from src.analytics import insights
+from src.pipeline.scoring import compute_attractiveness_score
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -137,6 +138,18 @@ async def _run_scrape(sources: list) -> dict:
                     "is_active": True,
                     "consecutive_misses": 0,
                     "quality_score": listing.quality_score,
+                    "attractiveness_score": compute_attractiveness_score({
+                        "title": listing.title,
+                        "company": listing.company,
+                        "tags": listing.tags,
+                        "quality_score": listing.quality_score,
+                        "source": listing.source,
+                        "salary_min": listing.salary_min,
+                        "salary_max": listing.salary_max,
+                        "salary_estimated": False,
+                        "posted_at": listing.posted_at,
+                        "first_seen": now_ts,
+                    }),
                 }
 
                 if existing_row:

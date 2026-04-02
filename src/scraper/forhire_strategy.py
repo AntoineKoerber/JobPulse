@@ -68,6 +68,10 @@ class ForHireStrategy(BaseScrapeStrategy):
             # Strip the [HIRING] prefix
             title = re.sub(r"^\[HIRING\]\s*", "", title, flags=re.IGNORECASE).strip()
 
+            # Filter low-quality posts
+            if not self._is_legit_post(title):
+                return None
+
             external_id = hashlib.md5(url.encode()).hexdigest()[:16]
 
             # Extract budget if present (e.g. "$50-100", "€200", "negotiable")
@@ -87,3 +91,19 @@ class ForHireStrategy(BaseScrapeStrategy):
         except Exception as e:
             logger.warning("Failed to parse r/forhire entry: %s", e)
             return None
+
+    _BUDGET_RE = re.compile(
+        r"[\$€£]\d|budget|rate|salary|compensation|per\s*hour|/hr|/h\b",
+        re.IGNORECASE,
+    )
+    _ROLE_RE = re.compile(
+        r"developer|engineer|designer|manager|analyst|architect|devops|"
+        r"programmer|frontend|backend|fullstack|full.stack|data\s*scien",
+        re.IGNORECASE,
+    )
+
+    def _is_legit_post(self, title: str) -> bool:
+        """Reject low-quality r/forhire posts using title heuristics."""
+        if len(title) < 20:
+            return False
+        return bool(self._BUDGET_RE.search(title) or self._ROLE_RE.search(title))

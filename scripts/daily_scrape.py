@@ -26,6 +26,7 @@ from src.pipeline.filter import filter_relevant
 from src.pipeline.change_detector import detect_changes, build_change_summary
 from src.resilience.stability_tracker import update_stability
 from src.resilience.fallback import get_last_successful_scrape, record_fallback_usage
+from src.pipeline.scoring import compute_attractiveness_score
 
 logging.basicConfig(
     level=logging.INFO,
@@ -57,6 +58,7 @@ async def run_scrape():
             logger.info("%s: fetched %d raw listings", source_name, len(raw_listings))
 
             normalized = []
+            hn_metadata = {}  # external_id -> {hn_score, hn_comments}
             for raw in raw_listings:
                 sal_min, sal_max, currency = extract_salary(
                     raw.salary_raw, raw.salary_min, raw.salary_max
@@ -76,6 +78,12 @@ async def run_scrape():
                 )
                 listing.quality_score = score_listing(listing)
                 normalized.append(listing)
+                # Carry HN engagement data for scoring
+                if getattr(raw, "hn_score", None) is not None:
+                    hn_metadata[raw.external_id] = {
+                        "hn_score": raw.hn_score,
+                        "hn_comments": getattr(raw, "hn_comments", 0),
+                    }
 
             if source_name not in GIG_SOURCES:
                 normalized, dropped = filter_relevant(normalized)
@@ -122,6 +130,22 @@ async def run_scrape():
             for listing in normalized:
                 existing_row = existing_map.get(listing.external_id)
 
+                # Build scoring context (includes HN metadata if available)
+                hn_meta = hn_metadata.get(listing.external_id, {})
+                score_ctx = {
+                    "title": listing.title,
+                    "company": listing.company,
+                    "tags": listing.tags,
+                    "quality_score": listing.quality_score,
+                    "source": listing.source,
+                    "salary_min": listing.salary_min,
+                    "salary_max": listing.salary_max,
+                    "salary_estimated": False,
+                    "posted_at": listing.posted_at,
+                    "first_seen": now_ts,
+                    **hn_meta,
+                }
+
                 row = {
                     "external_id": listing.external_id,
                     "source": listing.source,
@@ -138,6 +162,7 @@ async def run_scrape():
                     "is_active": True,
                     "consecutive_misses": 0,
                     "quality_score": listing.quality_score,
+                    "attractiveness_score": compute_attractiveness_score(score_ctx),
                 }
 
                 if existing_row:
@@ -194,7 +219,42 @@ async def run_scrape():
         logger.error("Salary estimation failed: %s", e, exc_info=True)
         results["salary_estimation"] = {"status": "failed", "error": str(e)}
 
+    # ── Re-score listings that received salary estimates ──
+    try:
+        _rescore_estimated(db)
+    except Exception as e:
+        logger.error("Re-scoring failed: %s", e)
+
     return results
+
+
+def _rescore_estimated(db):
+    """Recompute attractiveness_score for recently estimated listings."""
+    offset = 0
+    updated = 0
+    while True:
+        batch = db.table("job_listings").select(
+            "id, title, company, tags, quality_score, source, "
+            "salary_min, salary_max, salary_estimated, salary_confidence, "
+            "posted_at, first_seen"
+        ).eq("is_active", True).eq(
+            "salary_estimated", True
+        ).order("id").range(offset, offset + 999).execute()
+
+        for row in batch.data:
+            new_score = compute_attractiveness_score(row)
+            if new_score != row.get("attractiveness_score", 0):
+                db.table("job_listings").update(
+                    {"attractiveness_score": new_score}
+                ).eq("id", row["id"]).execute()
+                updated += 1
+
+        if len(batch.data) < 1000:
+            break
+        offset += 1000
+
+    if updated:
+        logger.info("Re-scored %d estimated listings", updated)
 
 
 def main():

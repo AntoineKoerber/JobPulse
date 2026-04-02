@@ -1938,7 +1938,14 @@
           <button class="listing-tab active" id="tab-all">All Jobs</button>
           <button class="listing-tab" id="tab-saved">Saved <span class="saved-count">(0)</span></button>
         </div>
-        <span class="card-badge" id="results-count">—</span>
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <select class="filter-input" id="sort-select" style="font-size:0.78rem;padding:0.25rem 0.5rem;min-width:auto">
+            <option value="best">Best Match</option>
+            <option value="newest">Newest</option>
+            <option value="salary">Highest Salary</option>
+          </select>
+          <span class="card-badge" id="results-count">—</span>
+        </div>
       </div>
       <div class="jobs-header">
         <span></span>
@@ -2451,7 +2458,13 @@
       return;
     }
 
-    let f = 'is_active=eq.true&order=last_seen.desc';
+    const sortMode = document.getElementById('sort-select')?.value || 'best';
+    const sortOrders = {
+      best: 'attractiveness_score.desc,posted_at.desc.nullslast',
+      newest: 'posted_at.desc.nullslast',
+      salary: 'salary_max.desc.nullslast',
+    };
+    let f = `is_active=eq.true&order=${sortOrders[sortMode] || sortOrders.best}`;
     if (viewMode === 'saved') {
       f += `&id=in.(${[...savedIds].join(',')})`;
     }
@@ -2511,7 +2524,7 @@
     const off = (page - 1) * PAGE_SIZE;
     try {
       const res = await fetch(
-        `${SB}/rest/v1/job_listings?${f}&select=id,external_id,source,title,company,location,salary_min,salary_max,currency,tags,url,salary_estimated,salary_confidence`,
+        `${SB}/rest/v1/job_listings?${f}&select=id,external_id,source,title,company,location,salary_min,salary_max,currency,tags,url,salary_estimated,salary_confidence,attractiveness_score`,
         { headers: { ...H, 'Prefer': 'count=exact', 'Range': `${off}-${off + PAGE_SIZE - 1}` } }
       );
       let data = await res.json();
@@ -3107,6 +3120,10 @@
       page = 1;
       loadJobs();
       updateAlertBannerVisibility();
+    });
+    document.getElementById('sort-select').addEventListener('change', () => {
+      page = 1;
+      loadJobs();
     });
     document.querySelectorAll('.chip input').forEach(input => {
       input.addEventListener('change', updateAlertBannerVisibility);

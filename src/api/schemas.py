@@ -19,6 +19,8 @@ class RawJobListing(BaseModel):
     tags: List[str] = []
     url: Optional[str] = None
     posted_at: Optional[str] = None
+    hn_score: Optional[int] = None
+    hn_comments: Optional[int] = None
 
 
 class JobListing(BaseModel):
@@ -44,6 +46,7 @@ class JobListing(BaseModel):
     salary_confidence: Optional[float] = None
     salary_estimation_method: Optional[str] = None
     salary_estimated_at: Optional[str] = None
+    attractiveness_score: int = 0
 
 
 class ScrapeRequest(BaseModel):
